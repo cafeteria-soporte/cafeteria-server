@@ -2,10 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
-import { DtoRepository, FindOptions } from 'src/shared';
-import { UserNotFoundException, UsernameAlreadyTakenException } from '../exceptions';
+import { DtoRepository, FindOptions, PaginationResponseDto } from 'src/shared';
+import {
+    UserNotFoundException,
+    UsernameAlreadyTakenException,
+    CannotDeactivateSelfException,
+    InsufficientRoleException,
+} from '../exceptions';
 import { CreateUserDto } from '../dto/in/create-user.dto';
+import { FindUsersDto } from '../dto/in/find-users.dto';
 import { UserAuthDto } from '../dto/user-auth.dto';
+import { UserDto } from '../dto/user.dto';
 import { hashPassword } from 'src/shared/utils/crypto.util';
 
 @Injectable()
@@ -17,6 +24,18 @@ export class UsersService {
         private readonly rawRepo: Repository<User>,
     ) {
         this.repo = new DtoRepository(rawRepo);
+    }
+
+    async findAll(params: FindUsersDto): Promise<PaginationResponseDto<UserDto>> {
+        return this.repo.findPaginated({
+            dto: UserDto,
+            pagination: params,
+            where: {
+                ...(params.active  !== undefined && { active: params.active }),
+                ...(params.roleId  !== undefined && { roleId: params.roleId }),
+            },
+            order: { id: 'ASC' },
+        });
     }
 
     async findOneById<T>(id: number, options: FindOptions<T>): Promise<T | null> {
@@ -48,6 +67,19 @@ export class UsersService {
 
         const saved = await this.rawRepo.save(user);
         return (await this.findOneById(saved.id, { throwException: false, dto }))!;
+    }
+
+    async updatePassword(userId: number, newHash: string, requiresPwdChange: boolean): Promise<void> {
+        await this.rawRepo.update(userId, { passwordHash: newHash, requiresPwdChange });
+    }
+
+    async deactivate(targetId: number, actorId: number, actorRoleId: number): Promise<void> {
+        if (actorId === targetId) throw new CannotDeactivateSelfException();
+
+        const target = await this.findOneById(targetId, { dto: UserDto, throwException: true });
+        if (actorRoleId >= target!.role.id) throw new InsufficientRoleException();
+
+        await this.rawRepo.update(targetId, { active: false });
     }
 
     async updateLoginAttempts(userId: number, failedAttempts: number, lockedUntil: Date | null): Promise<void> {

@@ -1,8 +1,9 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Patch, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiNoContentResponse } from '@nestjs/swagger';
 import { AuthService } from '../services/auth.service';
 import { LoginDto } from '../dto/login.dto';
 import { AuthResponseDto } from '../dto/auth-response.dto';
+import { ChangePasswordDto } from '../dto/in/change-password.dto';
 import { CreateUserDto } from 'src/modules/user-management/users/dto/in/create-user.dto';
 import { UserDto } from 'src/modules/user-management/users/dto/user.dto';
 import { Public } from '../decorators';
@@ -36,6 +37,20 @@ export class AuthController {
     @ApiConflict()
     async register(@Body() dto: CreateUserDto, @CurrentUser() user: AuthUser): Promise<UserDto> {
         return this.authService.register(dto, user.id);
+    }
+
+    @CashierUp()
+    @Patch('change-password')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiOperation({
+        summary: 'Cambiar contraseña propia',
+        description: 'El usuario cambia su propia contraseña. Después del cambio requires_pwd_change queda en false.',
+    })
+    @ApiNoContentResponse({ description: 'Contraseña actualizada.' })
+    @ApiValidationError()
+    @ApiUnauthorized()
+    async changePassword(@Body() dto: ChangePasswordDto, @CurrentUser('id') userId: number): Promise<void> {
+        return this.authService.changePassword(userId, dto);
     }
 
     @CashierUp()

@@ -2,14 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from '../dto/login.dto';
 import { AuthResponseDto } from '../dto/auth-response.dto';
+import { ChangePasswordDto } from '../dto/in/change-password.dto';
 import { JwtPayload } from '../strategies/jwt.strategy';
-import { comparePassword } from 'src/shared/utils/crypto.util';
+import { comparePassword, hashPassword } from 'src/shared/utils/crypto.util';
 import { UsersService } from 'src/modules/user-management/users/services/users.service';
 import { FindOptions } from 'src/shared';
 import { UserAuthDto } from 'src/modules/user-management/users/dto/user-auth.dto';
 import { UserDto } from 'src/modules/user-management/users/dto/user.dto';
 import { CreateUserDto } from 'src/modules/user-management/users/dto/in/create-user.dto';
-import { InvalidCredentialsException, AccountLockedException, AccountInactiveException } from '../exceptions';
+import { InvalidCredentialsException, AccountLockedException, AccountInactiveException, IncorrectPasswordException } from '../exceptions';
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_DURATION_MS   = 30 * 60 * 1000;
@@ -60,6 +61,17 @@ export class AuthService {
 
     async register(dto: CreateUserDto, createdById: number): Promise<UserDto> {
         return this.usersService.create(dto, createdById, UserDto);
+    }
+
+    async changePassword(userId: number, dto: ChangePasswordDto): Promise<void> {
+        const opts: FindOptions<UserAuthDto> = { throwException: true, dto: UserAuthDto };
+        const user = await this.usersService.findOneById(userId, opts);
+
+        const match = await comparePassword(dto.currentPassword, user!.passwordHash);
+        if (!match) throw new IncorrectPasswordException();
+
+        const newHash = await hashPassword(dto.newPassword);
+        await this.usersService.updatePassword(userId, newHash, false);
     }
 
     async logout(): Promise<void> { }
