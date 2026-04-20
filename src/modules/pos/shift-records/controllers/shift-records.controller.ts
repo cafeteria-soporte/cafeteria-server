@@ -11,6 +11,7 @@ import { CloseShiftDto } from '../dto/in/close-shift.dto';
 import { ShiftRecordDto } from '../dto/shift-record.dto';
 import { CashierUp } from 'src/app/auth/decorators';
 import { CurrentUser } from 'src/shared';
+import type { AuthUser } from 'src/app/auth/strategies/jwt.strategy';
 
 @ApiTags('POS - Shift Records')
 @Controller('shift-records')
@@ -22,8 +23,8 @@ export class ShiftRecordsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Abrir caja con fondo inicial' })
   @ApiCreatedResponse({ type: ShiftRecordDto })
-  open(@CurrentUser('id') userId: number, @Body() dto: OpenShiftDto) {
-    return this.shiftService.openShift(userId, dto);
+  open(@CurrentUser() currentUser: AuthUser, @Body() dto: OpenShiftDto) {
+    return this.shiftService.openShift(currentUser, dto);
   }
 
   @Post('close')
@@ -31,7 +32,7 @@ export class ShiftRecordsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cierre de turno ciego' })
   @ApiOkResponse({ description: 'Turno cerrado con resultado de discrepancia' })
-  close(@CurrentUser('id') userId: number, @Body() dto: CloseShiftDto) {
-    return this.shiftService.closeShift(userId, dto);
+  close(@CurrentUser() currentUser: AuthUser, @Body() dto: CloseShiftDto) {
+    return this.shiftService.closeShift(currentUser, dto);
   }
 }
