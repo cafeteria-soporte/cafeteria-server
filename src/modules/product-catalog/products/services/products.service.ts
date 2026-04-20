@@ -39,7 +39,7 @@ export class ProductsService {
     await this.rawRepo.save(product);
 
     await this.auditLog.create({
-      action: AuditAction.PRICE_CHANGED,
+      action: AuditAction.PRODUCT_CREATED,
       module: AuditModule.PRODUCTS,
       userId: currentUser.id,
       usernameSnapshot: currentUser.username,
@@ -105,10 +105,12 @@ export class ProductsService {
   }
 
   async remove(id: number, currentUser: AuthUser): Promise<void> {
+    await this.findOne(id);
+
     await this.rawRepo.update(id, { active: false });
 
     await this.auditLog.create({
-      action: AuditAction.USER_DEACTIVATED,
+      action: AuditAction.PRODUCT_DEACTIVATED,
       module: AuditModule.PRODUCTS,
       userId: currentUser.id,
       usernameSnapshot: currentUser.username,

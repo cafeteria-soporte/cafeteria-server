@@ -6,7 +6,7 @@ import { PaginationParamsDto } from 'src/shared';
 export class FindAuditLogsDto extends PaginationParamsDto {
     @ApiPropertyOptional({
         example: 'login',
-        description: 'Filtrar por acción. Valores válidos: `login`, `logout`, `login_failed`, `user_created`, `user_deactivated`, `password_changed`, `price_changed`, `stock_adjusted`, `shrinkage_recorded`, `sale_paid`, `sale_voided`, `shift_opened`, `shift_closed`, `settings_changed`.',
+        description: 'Filtrar por acción. Valores válidos: `login`, `logout`, `login_failed`, `user_created`, `user_deactivated`, `password_changed`, `product_created`, `product_deactivated`, `price_changed`, `stock_adjusted`, `shrinkage_recorded`, `sale_paid`, `sale_voided`, `shift_opened`, `shift_closed`, `settings_changed`.',
     })
     @IsOptional()
     @IsString()
