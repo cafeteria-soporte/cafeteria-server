@@ -7,6 +7,7 @@ import { AdministratorUp } from 'src/app/auth/decorators';
 import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { ApiNotFound, ApiValidationError } from 'src/shared/utils/swagger';
 import type { AuthUser } from 'src/app/auth/strategies/jwt.strategy';
+import { FindAllUsersResponseDto } from '../dto/out/find-all-users-response.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -16,7 +17,7 @@ export class UsersController {
     @Get()
     @AdministratorUp()
     @ApiOperation({ summary: 'Listar usuarios', description: 'Soporta filtrado por estado activo y rol.' })
-    @ApiOkResponse({ type: UserDto, isArray: true })
+    @ApiOkResponse({ type: FindAllUsersResponseDto})
     findAll(@Query() params: FindUsersDto) {
         return this.usersService.findAll(params);
     }
