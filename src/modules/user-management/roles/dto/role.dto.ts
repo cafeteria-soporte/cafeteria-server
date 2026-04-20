@@ -1,9 +1,12 @@
-import { DtoField, DtoRelation } from "src/shared";
+import { ApiProperty } from '@nestjs/swagger';
+import { DtoField } from 'src/shared';
 
 export class RoleDto {
+    @ApiProperty({ example: 2 })
     @DtoField()
-    id: number
+    id: number;
 
+    @ApiProperty({ example: 'administrator', enum: ['root', 'administrator', 'cashier'] })
     @DtoField()
-    name: string
+    name: string;
 }

@@ -23,7 +23,7 @@ export class UserDto {
     @DtoField()
     active: boolean;
 
-    @ApiProperty({ type: () => RoleDto })
+    @ApiProperty({ type: RoleDto })
     @DtoRelation(() => RoleDto)
     role: RoleDto;
 }
