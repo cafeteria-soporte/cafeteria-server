@@ -5,9 +5,9 @@ import { ShiftRecordsService } from './services/shift-records.service';
 import { ShiftRecordsController } from './controllers/shift-records.controller';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([ShiftRecord])],
-    controllers: [ShiftRecordsController],
-    providers: [ShiftRecordsService],
-    exports: [ShiftRecordsService],
+  imports: [TypeOrmModule.forFeature([ShiftRecord])],
+  controllers: [ShiftRecordsController],
+  providers: [ShiftRecordsService],
+  exports: [ShiftRecordsService],
 })
 export class ShiftRecordsModule {}
