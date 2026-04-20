@@ -11,22 +11,36 @@ import { UserAuthDto } from 'src/modules/user-management/users/dto/user-auth.dto
 import { UserDto } from 'src/modules/user-management/users/dto/user.dto';
 import { CreateUserDto } from 'src/modules/user-management/users/dto/in/create-user.dto';
 import { InvalidCredentialsException, AccountLockedException, AccountInactiveException, IncorrectPasswordException } from '../exceptions';
+import { AuditLogService } from 'src/modules/system-config/audit-log/services/audit-log.service';
+import { AuditAction } from 'src/modules/system-config/audit-log/enums/audit-action.enum';
+import { AuditModule } from 'src/modules/system-config/audit-log/enums/audit-module.enum';
+import { AuthUser } from '../strategies/jwt.strategy';
 
 const MAX_LOGIN_ATTEMPTS = 5;
-const LOCK_DURATION_MS   = 30 * 60 * 1000;
+const LOCK_DURATION_MS = 30 * 60 * 1000;
+const ROLE_NAMES: Record<number, string> = { 1: 'root', 2: 'administrator', 3: 'cashier' };
 
 @Injectable()
 export class AuthService {
     constructor(
         private readonly usersService: UsersService,
         private readonly jwtService: JwtService,
+        private readonly auditLog: AuditLogService,
     ) { }
 
     async login(dto: LoginDto): Promise<AuthResponseDto> {
         const opts: FindOptions<UserAuthDto> = { throwException: false, dto: UserAuthDto };
         const user = await this.usersService.findOneByUsername(dto.username, opts);
 
-        if (!user) throw new InvalidCredentialsException();
+        if (!user) {
+            await this.auditLog.create({
+                action: AuditAction.LOGIN_FAILED,
+                module: AuditModule.AUTH,
+                usernameSnapshot: dto.username,
+            });
+            throw new InvalidCredentialsException();
+        }
+
         if (!user.active) throw new AccountInactiveException();
         if (user.lockedUntil && user.lockedUntil > new Date()) throw new AccountLockedException();
 
@@ -38,32 +52,58 @@ export class AuthService {
                 ? new Date(Date.now() + LOCK_DURATION_MS)
                 : null;
             await this.usersService.updateLoginAttempts(user.id, newAttempts, lockedUntil);
+            await this.auditLog.create({
+                userId: user.id,
+                usernameSnapshot: user.username,
+                roleSnapshot: user.role.name,
+                action: AuditAction.LOGIN_FAILED,
+                module: AuditModule.AUTH,
+            });
             throw new InvalidCredentialsException();
         }
 
         await this.usersService.resetLoginAttempts(user.id);
 
         const payload: JwtPayload = {
-            sub:               user.id,
-            username:          user.username,
-            roleId:            user.role.id,
+            sub: user.id,
+            username: user.username,
+            roleId: user.role.id,
             requiresPwdChange: user.requiresPwdChange,
         };
+
+        await this.auditLog.create({
+            userId: user.id,
+            usernameSnapshot: user.username,
+            roleSnapshot: user.role.name,
+            action: AuditAction.LOGIN,
+            module: AuditModule.AUTH,
+        });
 
         const userDtoOpts: FindOptions<UserDto> = { throwException: false, dto: UserDto };
 
         return {
-            accessToken:       this.jwtService.sign(payload),
+            accessToken: this.jwtService.sign(payload),
             requiresPwdChange: user.requiresPwdChange,
-            user:              (await this.usersService.findOneById(user.id, userDtoOpts))!,
+            user: (await this.usersService.findOneById(user.id, userDtoOpts))!,
         };
     }
 
-    async register(dto: CreateUserDto, createdById: number): Promise<UserDto> {
-        return this.usersService.create(dto, createdById, UserDto);
+    async register(dto: CreateUserDto, createdById: number, actingUser: AuthUser): Promise<UserDto> {
+        const created = await this.usersService.create(dto, createdById, UserDto);
+        await this.auditLog.create({
+            userId: actingUser.id,
+            usernameSnapshot: actingUser.username,
+            roleSnapshot: ROLE_NAMES[actingUser.roleId],
+            action: AuditAction.USER_CREATED,
+            module: AuditModule.USERS,
+            affectedEntity: 'users',
+            entityId: created.id,
+            newValue: created.username,
+        });
+        return created;
     }
 
-    async changePassword(userId: number, dto: ChangePasswordDto): Promise<void> {
+    async changePassword(userId: number, dto: ChangePasswordDto, actingUser: AuthUser): Promise<void> {
         const opts: FindOptions<UserAuthDto> = { throwException: true, dto: UserAuthDto };
         const user = await this.usersService.findOneById(userId, opts);
 
@@ -72,7 +112,25 @@ export class AuthService {
 
         const newHash = await hashPassword(dto.newPassword);
         await this.usersService.updatePassword(userId, newHash, false);
+
+        await this.auditLog.create({
+            userId: actingUser.id,
+            usernameSnapshot: actingUser.username,
+            roleSnapshot: ROLE_NAMES[actingUser.roleId],
+            action: AuditAction.PASSWORD_CHANGED,
+            module: AuditModule.AUTH,
+            affectedEntity: 'users',
+            entityId: userId,
+        });
     }
 
-    async logout(): Promise<void> { }
+    async logout(actingUser: AuthUser): Promise<void> {
+        await this.auditLog.create({
+            userId: actingUser.id,
+            usernameSnapshot: actingUser.username,
+            roleSnapshot: ROLE_NAMES[actingUser.roleId],
+            action: AuditAction.LOGOUT,
+            module: AuditModule.AUTH,
+        });
+    }
 }

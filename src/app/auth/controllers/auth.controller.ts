@@ -36,7 +36,7 @@ export class AuthController {
     @ApiValidationError()
     @ApiConflict()
     async register(@Body() dto: CreateUserDto, @CurrentUser() user: AuthUser): Promise<UserDto> {
-        return this.authService.register(dto, user.id);
+        return this.authService.register(dto, user.id, user);
     }
 
     @CashierUp()
@@ -49,8 +49,8 @@ export class AuthController {
     @ApiNoContentResponse({ description: 'Contraseña actualizada.' })
     @ApiValidationError()
     @ApiUnauthorized()
-    async changePassword(@Body() dto: ChangePasswordDto, @CurrentUser('id') userId: number): Promise<void> {
-        return this.authService.changePassword(userId, dto);
+    async changePassword(@Body() dto: ChangePasswordDto, @CurrentUser() actingUser: AuthUser): Promise<void> {
+        return this.authService.changePassword(actingUser.id, dto, actingUser);
     }
 
     @CashierUp()
@@ -59,7 +59,7 @@ export class AuthController {
     @ApiOperation({ summary: 'Cerrar sesión', description: 'El accessToken expira por sí solo. Requiere Authorization: Bearer <token>.' })
     @ApiNoContentResponse({ description: 'Sesión cerrada.' })
     @ApiUnauthorized()
-    async logout(): Promise<void> {
-        return this.authService.logout();
+    async logout(@CurrentUser() actingUser: AuthUser): Promise<void> {
+        return this.authService.logout(actingUser);
     }
 }

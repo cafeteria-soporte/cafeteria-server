@@ -1,0 +1,16 @@
+export enum AuditAction {
+    LOGIN = 'login',
+    LOGOUT = 'logout',
+    LOGIN_FAILED = 'login_failed',
+    USER_CREATED = 'user_created',
+    USER_DEACTIVATED = 'user_deactivated',
+    PASSWORD_CHANGED = 'password_changed',
+    PRICE_CHANGED = 'price_changed',
+    STOCK_ADJUSTED = 'stock_adjusted',
+    SHRINKAGE_RECORDED = 'shrinkage_recorded',
+    SALE_PAID = 'sale_paid',
+    SALE_VOIDED = 'sale_voided',
+    SHIFT_OPENED = 'shift_opened',
+    SHIFT_CLOSED = 'shift_closed',
+    SETTINGS_CHANGED = 'settings_changed',
+}

@@ -18,6 +18,7 @@ Sistema de procesamiento transaccional para una cafetería comercial. Esta guía
 10. [Decoradores de Swagger para errores](#10-decoradores-de-swagger-para-errores)
 11. [Entidades base](#11-entidades-base)
 12. [Módulos existentes y sus servicios](#12-módulos-existentes-y-sus-servicios)
+13. [Audit Log — registrar eventos](#13-audit-log--registrar-eventos)
 
 ---
 
@@ -939,45 +940,145 @@ constructor(
 
 ### AuditLogService — módulo global
 
-`AuditLogModule` está marcado como `@Global()`, lo que significa que `AuditLogService` se puede inyectar en cualquier servicio **sin importar el módulo**:
+`AuditLogModule` está marcado como `@Global()`, lo que significa que `AuditLogService` se puede inyectar en cualquier servicio **sin importar el módulo**. Ver sección 13 para la guía completa.
+
+---
+
+## 13. Audit Log — registrar eventos
+
+### Inyectar el servicio
+
+`AuditLogModule` es `@Global()` — no hace falta agregarlo a `imports[]` del módulo propio.
 
 ```typescript
-// No es necesario poner AuditLogModule en imports[]:
-@Module({
-    imports: [TypeOrmModule.forFeature([Product])],
-    providers: [ProductsService],
-})
-export class ProductsModule {}
+import { AuditLogService } from 'src/modules/system-config/audit-log/services/audit-log.service';
+import { AuditAction } from 'src/modules/system-config/audit-log/enums/audit-action.enum';
+import { AuditModule } from 'src/modules/system-config/audit-log/enums/audit-module.enum';
 
-// El servicio puede inyectarlo directamente:
 @Injectable()
 export class ProductsService {
     constructor(
         @InjectRepository(Product) rawRepo: Repository<Product>,
-        private readonly auditLog: AuditLogService,
+        private readonly auditLog: AuditLogService,   // sin tocar el módulo
     ) {
         this.repo = new DtoRepository(rawRepo);
-    }
-
-    async updatePrice(id: number, newPrice: number, actingUser: AuthUser): Promise<ProductDto> {
-        const product = await this.findOne(id);
-        await this.rawRepo.update(id, { salePrice: newPrice });
-
-        await this.auditLog.create({
-            action: 'price_changed',
-            module: 'products',
-            userId: actingUser.id,
-            usernameSnapshot: actingUser.username,
-            roleSnapshot: 'administrator',
-            entityId: id,
-            previousValue: product.salePrice.toString(),
-            newValue: newPrice.toString(),
-        });
-
-        return this.findOne(id);
     }
 }
 ```
 
-Las acciones válidas para el audit log están definidas como campo `action` en la entidad `AuditLog`:
-`login`, `logout`, `login_failed`, `user_created`, `user_deactivated`, `password_changed`, `price_changed`, `stock_adjusted`, `shrinkage_recorded`, `sale_paid`, `sale_voided`, `shift_opened`, `shift_closed`, `settings_changed`.
+### Firma de `create()`
+
+```typescript
+auditLog.create(data: CreateAuditLogDto): Promise<void>
+```
+
+### Campos de `CreateAuditLogDto`
+
+| Campo | Tipo | Requerido | Descripción |
+|---|---|---|---|
+| `action` | `AuditAction` | **Sí** | Qué ocurrió (ver tabla abajo) |
+| `module` | `AuditModule` | **Sí** | Módulo donde ocurrió (ver tabla abajo) |
+| `userId` | `number \| null` | No | ID del usuario que ejecutó la acción. `null` si el usuario no existe (ej. login fallido con username inválido) |
+| `usernameSnapshot` | `string \| null` | No | Username en el momento del evento. Snapshot — no cambia si el usuario se renombra |
+| `roleSnapshot` | `string \| null` | No | Nombre del rol en el momento. Usar `ROLE_NAMES[actingUser.roleId]` |
+| `affectedEntity` | `string \| null` | No | Nombre de la tabla afectada (`'users'`, `'products'`, etc.) |
+| `entityId` | `number \| null` | No | ID del registro afectado |
+| `previousValue` | `string \| null` | No | Valor anterior (para cambios de precio, configuración, etc.) |
+| `newValue` | `string \| null` | No | Valor nuevo |
+| `ip` | `string \| null` | No | IP del cliente (si se captura) |
+| `device` | `string \| null` | No | User-agent o descripción del dispositivo |
+
+### Valores de `AuditAction`
+
+```typescript
+import { AuditAction } from 'src/modules/system-config/audit-log/enums/audit-action.enum';
+```
+
+| Valor | Cuándo registrar |
+|---|---|
+| `AuditAction.LOGIN` | Login exitoso |
+| `AuditAction.LOGOUT` | Cierre de sesión |
+| `AuditAction.LOGIN_FAILED` | Credenciales inválidas |
+| `AuditAction.USER_CREATED` | Se crea un nuevo usuario |
+| `AuditAction.USER_DEACTIVATED` | Se desactiva una cuenta |
+| `AuditAction.PASSWORD_CHANGED` | El usuario cambia su contraseña |
+| `AuditAction.PRICE_CHANGED` | Se modifica el precio de un producto |
+| `AuditAction.STOCK_ADJUSTED` | Ajuste manual de inventario |
+| `AuditAction.SHRINKAGE_RECORDED` | Merma registrada |
+| `AuditAction.SALE_PAID` | Venta confirmada y pagada |
+| `AuditAction.SALE_VOIDED` | Venta anulada |
+| `AuditAction.SHIFT_OPENED` | Apertura de turno de caja |
+| `AuditAction.SHIFT_CLOSED` | Cierre de turno de caja |
+| `AuditAction.SETTINGS_CHANGED` | Se modifica `global_settings` |
+
+### Valores de `AuditModule`
+
+```typescript
+import { AuditModule } from 'src/modules/system-config/audit-log/enums/audit-module.enum';
+```
+
+| Valor | Módulo |
+|---|---|
+| `AuditModule.AUTH` | Login, logout, cambio de contraseña |
+| `AuditModule.USERS` | Gestión de usuarios |
+| `AuditModule.PRODUCTS` | Catálogo de productos |
+| `AuditModule.INVENTORY` | Stock y movimientos |
+| `AuditModule.SHIFTS` | Turnos de caja |
+| `AuditModule.ORDERS` | Órdenes / ventas |
+| `AuditModule.PAYMENTS` | Pagos |
+| `AuditModule.SETTINGS` | Configuración global |
+
+### Cómo obtener los datos del usuario que actúa
+
+El controller recibe el usuario autenticado con `@CurrentUser()` y lo pasa al servicio:
+
+```typescript
+// Controller:
+@Patch(':id/price')
+@AdministratorUp()
+async updatePrice(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePriceDto,
+    @CurrentUser() actingUser: AuthUser,   // <-- usuario del token
+) {
+    return this.service.updatePrice(id, dto, actingUser);
+}
+
+// Servicio:
+const ROLE_NAMES: Record<number, string> = { 1: 'root', 2: 'administrator', 3: 'cashier' };
+
+async updatePrice(id: number, dto: UpdatePriceDto, actingUser: AuthUser): Promise<ProductDto> {
+    const product = await this.findOne(id);
+    await this.rawRepo.update(id, { salePrice: dto.salePrice });
+
+    await this.auditLog.create({
+        action:           AuditAction.PRICE_CHANGED,
+        module:           AuditModule.PRODUCTS,
+        userId:           actingUser.id,
+        usernameSnapshot: actingUser.username,
+        roleSnapshot:     ROLE_NAMES[actingUser.roleId],
+        affectedEntity:   'products',
+        entityId:         id,
+        previousValue:    product.salePrice.toString(),
+        newValue:         dto.salePrice.toString(),
+    });
+
+    return this.findOne(id);
+}
+```
+
+`AuthUser` viene del token JWT y tiene: `id`, `username`, `roleId`, `requiresPwdChange`. No tiene el nombre del rol — usar `ROLE_NAMES[actingUser.roleId]` para obtenerlo.
+
+### Eventos sin usuario autenticado
+
+Para `LOGIN_FAILED` con username inexistente, `userId` y las snapshots van en `null`:
+
+```typescript
+await this.auditLog.create({
+    action:           AuditAction.LOGIN_FAILED,
+    module:           AuditModule.AUTH,
+    usernameSnapshot: dto.username,   // el username que intentó entrar
+    userId:           null,           // no existe en la BD
+    roleSnapshot:     null,
+});
+```
