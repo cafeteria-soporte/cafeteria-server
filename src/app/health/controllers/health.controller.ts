@@ -18,6 +18,7 @@ export class HealthController {
     private readonly disk: DiskHealthIndicator,
   ) {}
 
+  @Public()
   @Get()
   @HealthCheck()
   @ApiOperation({
