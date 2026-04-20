@@ -1002,6 +1002,8 @@ import { AuditAction } from 'src/modules/system-config/audit-log/enums/audit-act
 | `AuditAction.USER_CREATED` | Se crea un nuevo usuario |
 | `AuditAction.USER_DEACTIVATED` | Se desactiva una cuenta |
 | `AuditAction.PASSWORD_CHANGED` | El usuario cambia su contraseña |
+| `AuditAction.PRODUCT_CREATED` | Se crea un nuevo producto |
+| `AuditAction.PRODUCT_DEACTIVATED` | Se desactiva un producto |
 | `AuditAction.PRICE_CHANGED` | Se modifica el precio de un producto |
 | `AuditAction.STOCK_ADJUSTED` | Ajuste manual de inventario |
 | `AuditAction.SHRINKAGE_RECORDED` | Merma registrada |

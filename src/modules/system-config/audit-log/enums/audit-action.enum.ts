@@ -5,6 +5,8 @@ export enum AuditAction {
     USER_CREATED = 'user_created',
     USER_DEACTIVATED = 'user_deactivated',
     PASSWORD_CHANGED = 'password_changed',
+    PRODUCT_CREATED = 'product_created',
+    PRODUCT_DEACTIVATED = 'product_deactivated',
     PRICE_CHANGED = 'price_changed',
     STOCK_ADJUSTED = 'stock_adjusted',
     SHRINKAGE_RECORDED = 'shrinkage_recorded',
