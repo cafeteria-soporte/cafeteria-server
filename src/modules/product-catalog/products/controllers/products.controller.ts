@@ -23,6 +23,7 @@ import { UpdateProductDto } from '../dto/in/update-product.dto';
 import { ProductDto } from '../dto/product.dto';
 import { AdministratorUp, CashierUp } from 'src/app/auth/decorators';
 import { PaginationParamsDto } from 'src/shared';
+import { FindAllProductsResponseDto } from '../dto/out/find-all-products-response.dto';
 
 @ApiTags('Catalog - Products')
 @Controller('products')
@@ -41,7 +42,7 @@ export class ProductsController {
   @Get()
   @CashierUp()
   @ApiOperation({ summary: 'Listar todos los productos activos' })
-  @ApiOkResponse({ type: ProductDto, isArray: true })
+  @ApiOkResponse({ type: FindAllProductsResponseDto })
   findAll(@Query() pagination: PaginationParamsDto) {
     return this.productsService.findAll(pagination);
   }

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
   DtoRepository,
+  MutationOptions,
   PaginationParamsDto,
   PaginationResponseDto,
 } from 'src/shared';
@@ -63,5 +64,15 @@ export class ProductsService {
   async remove(id: number): Promise<void> {
     await this.findOne(id);
     await this.rawRepo.update(id, { active: false });
+  }
+
+  async findCurrentStock(productId: number, options?: MutationOptions): Promise<number> {
+    const manager = options?.manager ?? this.rawRepo.manager;
+    const product = await manager.findOne(Product, {
+      where: { id: productId },
+      select: { id: true, currentStock: true },
+    });
+    if (!product) throw new ProductNotFoundException();
+    return product.currentStock;
   }
 }
