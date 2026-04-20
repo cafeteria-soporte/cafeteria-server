@@ -64,4 +64,3 @@
 
 // Este barrel existe para excepciones shared (si alguna vez las necesitas).
 // Las domain exceptions van en su propio módulo (modules/X/exceptions/).
-
