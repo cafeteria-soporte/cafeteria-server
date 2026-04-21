@@ -4,10 +4,11 @@ import { IsOptional, IsString, IsInt, Min, IsDateString } from 'class-validator'
 import { PaginationParamsDto } from 'src/shared';
 
 export class FindAuditLogsDto extends PaginationParamsDto {
-    @ApiPropertyOptional({
-        example: 'login',
-        description: 'Filtrar por acción. Valores válidos: `login`, `logout`, `login_failed`, `user_created`, `user_deactivated`, `password_changed`, `product_created`, `product_deactivated`, `price_changed`, `stock_adjusted`, `shrinkage_recorded`, `sale_paid`, `sale_voided`, `shift_opened`, `shift_closed`, `settings_changed`.',
-    })
+  @ApiPropertyOptional({
+    example: 'login',
+    description:
+      'Filtrar por acción. Valores válidos: `login`, `logout`, `login_failed`, `user_created`, `user_deactivated`, `password_changed`, `product_created`, `product_deactivated`, `price_changed`, `stock_adjusted`, `shrinkage_recorded`, `sale_paid`, `sale_voided`, `shift_opened`, `shift_closed`, `settings_changed`, `order_item_added`, `order_item_removed`, `order_payment_added`.',
+  })
     @IsOptional()
     @IsString()
     action?: string;

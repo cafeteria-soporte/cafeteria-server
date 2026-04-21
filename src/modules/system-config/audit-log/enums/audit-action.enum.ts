@@ -15,4 +15,7 @@ export enum AuditAction {
   SHIFT_OPENED = 'shift_opened',
   SHIFT_CLOSED = 'shift_closed',
   SETTINGS_CHANGED = 'settings_changed',
+  ORDER_ITEM_ADDED = 'order_item_added',
+  ORDER_ITEM_REMOVED = 'order_item_removed',
+  ORDER_PAYMENT_ADDED = 'order_payment_added',
 }

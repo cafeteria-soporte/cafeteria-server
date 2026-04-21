@@ -16,6 +16,7 @@ import {
   AuditModule,
 } from 'src/modules/system-config/audit-log/enums';
 import { AuthUser } from 'src/app/auth/strategies/jwt.strategy';
+import { UserOrdersService } from 'src/modules/pos/user-orders/services/user-orders.service';
 
 @Injectable()
 export class ShiftRecordsService {
@@ -26,6 +27,7 @@ export class ShiftRecordsService {
   constructor(
     @InjectRepository(ShiftRecord) rawRepo: Repository<ShiftRecord>,
     private readonly auditLog: AuditLogService,
+    private readonly userOrdersService: UserOrdersService,
   ) {
     this.repo = new DtoRepository(rawRepo);
     this.rawRepo = rawRepo;
@@ -82,9 +84,10 @@ export class ShiftRecordsService {
 
     if (!activeShift) throw new ShiftNotFoundException();
 
-    // TODO: reemplazar con initialFund + total de ventas del turno
-    // cuando UserOrdersModule esté implementado
-    const expectedAmount = Number(activeShift.initialFund);
+    const totalSales = await this.userOrdersService.getTotalByShift(
+      activeShift.id,
+    );
+    const expectedAmount = Number(activeShift.initialFund) + totalSales;
     const declaredAmount = Number(dto.declaredAmount);
     const discrepancy = declaredAmount - expectedAmount;
     const discrepancyAlert = Math.abs(discrepancy) > this.DISCREPANCY_THRESHOLD;
@@ -118,5 +121,3 @@ export class ShiftRecordsService {
     return { message: 'Turno cerrado correctamente.', discrepancyAlert };
   }
 }
-
-// falta implementar el modulo de ventas para tener los valores verdaderos de las ventas del turno

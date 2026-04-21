@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
   DtoRepository,
+  MutationOptions,
   PaginationParamsDto,
   PaginationResponseDto,
 } from 'src/shared';
@@ -70,6 +71,20 @@ export class ProductsService {
       where: { active: true },
       order: { name: 'ASC' },
     });
+  }
+
+  async findCurrentStock(
+    productId: number,
+    options?: MutationOptions,
+  ): Promise<number> {
+    const manager = options?.manager ?? this.rawRepo.manager;
+
+    const product = await manager.findOne(Product, {
+      where: { id: productId },
+    });
+
+    if (!product) throw new ProductNotFoundException();
+    return product.currentStock;
   }
 
   async findOne(id: number): Promise<ProductDto> {
