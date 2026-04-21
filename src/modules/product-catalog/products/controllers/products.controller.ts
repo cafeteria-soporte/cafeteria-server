@@ -22,8 +22,9 @@ import { CreateProductDto } from '../dto/in/create-product.dto';
 import { UpdateProductDto } from '../dto/in/update-product.dto';
 import { ProductDto } from '../dto/product.dto';
 import { AdministratorUp, CashierUp } from 'src/app/auth/decorators';
-import { CurrentUser, PaginationParamsDto } from 'src/shared';
+import { CurrentUser } from 'src/shared';
 import { FindAllProductsResponseDto } from '../dto/out/find-all-products-response.dto';
+import { FindProductsDto } from '../dto/in/find-products.dto';
 import type { AuthUser } from 'src/app/auth/strategies/jwt.strategy';
 
 @ApiTags('Catalog - Products')
@@ -44,8 +45,8 @@ export class ProductsController {
   @CashierUp()
   @ApiOperation({ summary: 'Listar todos los productos activos' })
   @ApiOkResponse({ type: FindAllProductsResponseDto })
-  findAll(@Query() pagination: PaginationParamsDto) {
-    return this.productsService.findAll(pagination);
+  findAll(@Query() params: FindProductsDto) {
+    return this.productsService.findAll(params);
   }
 
   @Get(':id')
@@ -53,7 +54,7 @@ export class ProductsController {
   @ApiOperation({ summary: 'Obtener un producto por ID' })
   @ApiOkResponse({ type: ProductDto })
   findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.productsService.findOne(id);
+    return this.productsService.findOne(id, { dto: ProductDto, throwException: true });
   }
 
   @Patch(':id')
