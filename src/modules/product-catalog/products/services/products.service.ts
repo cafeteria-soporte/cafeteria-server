@@ -1,8 +1,9 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import {
   DtoRepository,
+  MutationOptions,
   PaginationParamsDto,
   PaginationResponseDto,
 } from 'src/shared';
@@ -120,5 +121,16 @@ export class ProductsService {
       previousValue: 'active',
       newValue: 'inactive',
     });
+  }
+
+
+  async findCurrentStock(productId: number, options?: MutationOptions): Promise<number> {
+    const manager: EntityManager = options?.manager ?? this.rawRepo.manager;
+    const product = await manager.findOne(Product, {
+      where: { id: productId },
+      select: { id: true, currentStock: true },
+    });
+    if (!product) throw new ProductNotFoundException();
+    return product.currentStock;
   }
 }
