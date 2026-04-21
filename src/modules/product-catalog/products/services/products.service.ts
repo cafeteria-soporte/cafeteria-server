@@ -73,20 +73,6 @@ export class ProductsService {
     });
   }
 
-  async findCurrentStock(
-    productId: number,
-    options?: MutationOptions,
-  ): Promise<number> {
-    const manager = options?.manager ?? this.rawRepo.manager;
-
-    const product = await manager.findOne(Product, {
-      where: { id: productId },
-    });
-
-    if (!product) throw new ProductNotFoundException();
-    return product.currentStock;
-  }
-
   async findOne(id: number): Promise<ProductDto> {
     const product = await this.repo.findOne({ dto: ProductDto, where: { id } });
     if (!product) throw new ProductNotFoundException();
