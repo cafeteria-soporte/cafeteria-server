@@ -36,4 +36,10 @@ export class StockMovementTypesService {
         if (!result && options.throwException !== false) throw new StockMovementTypeNotFoundException();
         return result;
     }
+
+    async findIdByName(name: string): Promise<number> {
+        const result = await this.repo.findOne({ dto: StockMovementTypeDto, where: { name } });
+        if (!result) throw new StockMovementTypeNotFoundException();
+        return result.id;
+    }
 }

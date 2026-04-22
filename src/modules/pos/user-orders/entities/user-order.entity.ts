@@ -26,8 +26,8 @@ export class UserOrder extends BaseCreatedUpdated {
   @Column({ name: 'voided_by', type: 'int', nullable: true })
   voidedBy: number | null;
 
-  @Column({ name: 'receipt_number', type: 'varchar', length: 50, unique: true })
-  receiptNumber: string;
+  @Column({ name: 'receipt_number', type: 'varchar', length: 50, unique: true, nullable: true })
+  receiptNumber: string | null;
 
   @Column({ name: 'total', type: 'decimal', precision: 10, scale: 2 })
   total: number;

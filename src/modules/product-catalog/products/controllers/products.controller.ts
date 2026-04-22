@@ -41,6 +41,14 @@ export class ProductsController {
     return this.productsService.create(dto, currentUser);
   }
 
+  @Get('low-stock')
+  @AdministratorUp()
+  @ApiOperation({ summary: 'Listar productos con stock igual o por debajo del mínimo' })
+  @ApiOkResponse({ type: [ProductDto] })
+  findLowStock() {
+    return this.productsService.findLowStock();
+  }
+
   @Get()
   @CashierUp()
   @ApiOperation({ summary: 'Listar todos los productos activos' })

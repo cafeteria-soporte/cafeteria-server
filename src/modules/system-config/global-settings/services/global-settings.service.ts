@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, Repository } from 'typeorm';
+import { EntityManager, ILike, Repository } from 'typeorm';
 import { DtoRepository, FindOptions } from 'src/shared';
 import { GlobalSetting } from '../entities/global-setting.entity';
 import { GlobalSettingDto } from '../dto/global-setting.dto';
@@ -43,6 +43,26 @@ export class GlobalSettingsService {
         const result = await this.repo.findOne({ dto: options.dto, where: { key } });
         if (!result && options.throwException !== false) throw new SettingNotFoundException(key);
         return result;
+    }
+
+    async findValueByKey(key: string): Promise<string | null> {
+        const setting = await this.rawRepo.findOne({ where: { key }, select: { key: true, value: true } });
+        return setting?.value ?? null;
+    }
+
+    async incrementReceiptNumber(manager: EntityManager): Promise<string> {
+        const setting = await manager.findOne(GlobalSetting, {
+            where: { key: 'next_receipt_number' },
+            lock:  { mode: 'pessimistic_write' },
+        });
+        if (!setting) throw new SettingNotFoundException('next_receipt_number');
+
+        const prefix = await manager.findOne(GlobalSetting, { where: { key: 'receipt_prefix' } });
+        const currentNumber = parseInt(setting.value, 10);
+        const receiptNumber = `${prefix?.value ?? ''}${String(currentNumber).padStart(6, '0')}`;
+
+        await manager.update(GlobalSetting, { key: 'next_receipt_number' }, { value: String(currentNumber + 1) });
+        return receiptNumber;
     }
 
     async update(key: string, dto: UpdateGlobalSettingDto, actingUser: AuthUser): Promise<GlobalSettingDto> {

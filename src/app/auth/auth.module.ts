@@ -8,7 +8,9 @@ import { AuthController } from './controllers/auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { PwdChangeGuard } from './guards/pwd-change.guard';
 import { UsersModule } from 'src/modules/user-management/users/users.module';
+import { GlobalSettingsModule } from 'src/modules/system-config/global-settings/global-settings.module';
 
 @Module({
     imports: [
@@ -22,9 +24,11 @@ import { UsersModule } from 'src/modules/user-management/users/users.module';
             }),
         }),
         UsersModule,
+        GlobalSettingsModule,
     ],
     providers: [
         { provide: APP_GUARD, useClass: JwtAuthGuard },
+        { provide: APP_GUARD, useClass: PwdChangeGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
         JwtConfig,
         AuthService,

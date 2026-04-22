@@ -126,6 +126,17 @@ export class ProductsService {
         });
     }
 
+    async findLowStock(): Promise<ProductDto[]> {
+        const entities = await this.rawRepo.createQueryBuilder('p')
+            .where('p.active = true')
+            .andWhere('p.current_stock <= p.min_stock')
+            .orderBy('p.name', 'ASC')
+            .getMany();
+
+        return Promise.all(entities.map(e => this.repo.findOne({ dto: ProductDto, where: { id: e.id } })))
+            .then(results => results.filter(Boolean) as ProductDto[]);
+    }
+
     async findCurrentStock(productId: number, options?: MutationOptions): Promise<number> {
         const manager: EntityManager = options?.manager ?? this.rawRepo.manager;
         const product = await manager.findOne(Product, {

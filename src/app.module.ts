@@ -16,6 +16,8 @@ import { OrderItemsModule } from './modules/pos/order-items/order-items.module';
 import { OrderPaymentsModule } from './modules/pos/order-payments/order-payments.module';
 import { GlobalSettingsModule } from './modules/system-config/global-settings/global-settings.module';
 import { AuditLogModule } from './modules/system-config/audit-log/audit-log.module';
+import { SalesModule } from './app/sales/sales.module';
+import { AdminModule } from './app/admin/admin.module';
 
 @Module({
 	imports: [
@@ -36,6 +38,8 @@ import { AuditLogModule } from './modules/system-config/audit-log/audit-log.modu
 		OrderPaymentsModule,
 		GlobalSettingsModule,
 		AuditLogModule,
+		SalesModule,
+		AdminModule,
 	],
 })
 export class AppModule { }
