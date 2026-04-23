@@ -21,12 +21,12 @@ export class PwdChangeGuard implements CanActivate {
 
         if (!user) return true;
 
-        if (user.requiresPwdChange && request.path !== CHANGE_PASSWORD_PATH) {
-            throw new ForbiddenException({
-                message: 'You must change your password before accessing this resource.',
-                error: 'PASSWORD_CHANGE_REQUIRED',
-            });
-        }
+        // if (user.requiresPwdChange && request.path !== CHANGE_PASSWORD_PATH) {
+        //     throw new ForbiddenException({
+        //         message: 'You must change your password before accessing this resource.',
+        //         error: 'PASSWORD_CHANGE_REQUIRED',
+        //     });
+        // }
 
         return true;
     }
