@@ -55,11 +55,13 @@ export class ProductsService {
         await this.categoriesService.findOne(dto.categoryId, { dto: CategoryDto, throwException: true });
 
         const product = this.rawRepo.create({
-            categoryId: dto.categoryId,
-            name:       dto.name.trim(),
-            salePrice:  dto.salePrice,
-            minStock:   dto.minStock  ?? 0,
-            active:     dto.active    ?? true,
+            categoryId:  dto.categoryId,
+            name:        dto.name.trim(),
+            description: dto.description ?? null,
+            salePrice:   dto.salePrice,
+            minStock:    dto.minStock  ?? 0,
+            imageUrl:    dto.imageUrl  ?? null,
+            active:      dto.active    ?? true,
         });
         await this.rawRepo.save(product);
 
@@ -87,11 +89,13 @@ export class ProductsService {
         }
 
         await this.rawRepo.update(id, {
-            ...(dto.categoryId  !== undefined && { categoryId: dto.categoryId }),
-            ...(dto.name        !== undefined && { name: dto.name.trim() }),
-            ...(dto.salePrice   !== undefined && { salePrice: dto.salePrice }),
-            ...(dto.minStock    !== undefined && { minStock: dto.minStock }),
-            ...(dto.active      !== undefined && { active: dto.active }),
+            ...(dto.categoryId  !== undefined && { categoryId:  dto.categoryId }),
+            ...(dto.name        !== undefined && { name:        dto.name.trim() }),
+            ...(dto.description !== undefined && { description: dto.description }),
+            ...(dto.salePrice   !== undefined && { salePrice:   dto.salePrice }),
+            ...(dto.minStock    !== undefined && { minStock:     dto.minStock }),
+            ...(dto.imageUrl    !== undefined && { imageUrl:     dto.imageUrl }),
+            ...(dto.active      !== undefined && { active:       dto.active }),
         });
 
         if (dto.salePrice !== undefined && dto.salePrice !== old.salePrice) {
