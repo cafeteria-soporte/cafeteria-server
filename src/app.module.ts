@@ -18,6 +18,7 @@ import { GlobalSettingsModule } from './modules/system-config/global-settings/gl
 import { AuditLogModule } from './modules/system-config/audit-log/audit-log.module';
 import { SalesModule } from './app/sales/sales.module';
 import { AdminModule } from './app/admin/admin.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 
 @Module({
 	imports: [
@@ -40,6 +41,7 @@ import { AdminModule } from './app/admin/admin.module';
 		AuditLogModule,
 		SalesModule,
 		AdminModule,
+		AnalyticsModule,
 	],
 })
 export class AppModule { }
