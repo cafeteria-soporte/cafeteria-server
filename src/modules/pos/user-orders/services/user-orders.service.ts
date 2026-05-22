@@ -1,150 +1,122 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import {
-  DtoRepository,
-  PaginationParamsDto,
-  PaginationResponseDto,
+    DtoRepository,
+    MutationOptions,
+    PaginationParamsDto,
+    PaginationResponseDto,
 } from 'src/shared';
 import { UserOrder } from '../entities/user-order.entity';
 import { UserOrderDto } from '../dto/user-order.dto';
 import { CreateUserOrderDto } from '../dto/in/create-user-order.dto';
-import { UpdateUserOrderDto } from '../dto/in/update-user-order.dto';
 import { UserOrderNotFoundException } from '../exceptions/user-order-not-found.exception';
+import { NoOpenShiftException } from '../exceptions/no-open-shift.exception';
 import { AuditLogService } from 'src/modules/system-config/audit-log/services/audit-log.service';
 import { AuditAction } from 'src/modules/system-config/audit-log/enums/audit-action.enum';
 import { AuditModule } from 'src/modules/system-config/audit-log/enums/audit-module.enum';
+import { ShiftRecordsService } from 'src/modules/pos/shift-records/services/shift-records.service';
 import type { AuthUser } from 'src/app/auth/strategies/jwt.strategy';
+
+const ROLE_NAMES: Record<number, string> = { 1: 'root', 2: 'administrator', 3: 'cashier' };
 
 @Injectable()
 export class UserOrdersService {
-  private readonly repo: DtoRepository<UserOrder>;
+    private readonly repo: DtoRepository<UserOrder>;
 
-  constructor(
-    @InjectRepository(UserOrder)
-    private readonly rawRepo: Repository<UserOrder>,
-    private readonly auditLog: AuditLogService,
-  ) {
-    this.repo = new DtoRepository(rawRepo);
-  }
-
-  async findAll(
-    pagination: PaginationParamsDto,
-  ): Promise<PaginationResponseDto<UserOrderDto>> {
-    return this.repo.findPaginated({
-      dto: UserOrderDto,
-      pagination,
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  async findOne(id: number): Promise<UserOrderDto> {
-    const order = await this.repo.findOne({ dto: UserOrderDto, where: { id } });
-    if (!order) throw new UserOrderNotFoundException();
-    return order;
-  }
-
-  async create(
-    data: CreateUserOrderDto,
-    currentUser: AuthUser,
-  ): Promise<UserOrderDto> {
-    const order = new UserOrder();
-    order.shiftRecordId = data.shiftRecordId;
-    order.receiptNumber = data.receiptNumber;
-    order.total = 0;
-    order.cashierId = currentUser.id;
-    order.status = 'open';
-
-    const saved = await this.rawRepo.save(order);
-
-    await this.auditLog.create({
-      action: AuditAction.SALE_PAID,
-      module: AuditModule.ORDERS,
-      userId: currentUser.id,
-      affectedEntity: 'user_orders',
-      entityId: saved.id,
-      newValue: JSON.stringify(saved),
-    });
-
-    return this.findOne(saved.id);
-  }
-
-  async update(
-    id: number,
-    data: UpdateUserOrderDto,
-    currentUser: AuthUser,
-  ): Promise<UserOrderDto> {
-    const previousValue = await this.findOne(id);
-
-    await this.rawRepo.update(id, data);
-
-    await this.auditLog.create({
-      action:
-        data.status === 'voided'
-          ? AuditAction.SALE_VOIDED
-          : AuditAction.SALE_PAID,
-      module: AuditModule.ORDERS,
-      userId: currentUser.id,
-      usernameSnapshot: currentUser.username,
-      affectedEntity: 'user_orders',
-      entityId: id,
-      previousValue: JSON.stringify(previousValue),
-      newValue: JSON.stringify(data),
-    });
-
-    return this.findOne(id);
-  }
-
-  async voidOrder(
-    id: number,
-    voidReason: string,
-    currentUser: AuthUser,
-  ): Promise<UserOrderDto> {
-    const order = await this.findOne(id);
-
-    if (order.status === 'voided') {
-      return order;
+    constructor(
+        @InjectRepository(UserOrder)
+        private readonly rawRepo: Repository<UserOrder>,
+        private readonly auditLog: AuditLogService,
+        @Inject(forwardRef(() => ShiftRecordsService))
+        private readonly shiftRecordsService: ShiftRecordsService,
+    ) {
+        this.repo = new DtoRepository(rawRepo);
     }
 
-    const previousValue = JSON.stringify(order);
+    async findAll(pagination: PaginationParamsDto): Promise<PaginationResponseDto<UserOrderDto>> {
+        return this.repo.findPaginated({
+            dto:        UserOrderDto,
+            pagination,
+            order:      { createdAt: 'DESC' },
+        });
+    }
 
-    await this.rawRepo.update(id, {
-      status: 'voided',
-      voidReason: voidReason,
-      voidedBy: currentUser.id,
-    });
+    async findOne(id: number): Promise<UserOrderDto> {
+        const order = await this.repo.findOne({ dto: UserOrderDto, where: { id } });
+        if (!order) throw new UserOrderNotFoundException();
+        return order;
+    }
 
-    await this.auditLog.create({
-      action: AuditAction.SALE_VOIDED,
-      module: AuditModule.ORDERS,
-      userId: currentUser.id,
-      usernameSnapshot: currentUser.username,
-      affectedEntity: 'user_orders',
-      entityId: id,
-      previousValue: previousValue,
-      newValue: JSON.stringify({ status: 'voided', voidReason }),
-    });
+    async findOneRaw(id: number, manager?: EntityManager): Promise<UserOrder> {
+        const mgr = manager ?? this.rawRepo.manager;
+        const order = await mgr.findOne(UserOrder, { where: { id } });
+        if (!order) throw new UserOrderNotFoundException();
+        return order;
+    }
 
-    return this.findOne(id);
-  }
+    async create(data: CreateUserOrderDto, currentUser: AuthUser): Promise<UserOrderDto> {
+        const openShift = await this.shiftRecordsService.findOpenShiftById(data.shiftRecordId, currentUser.id);
+        if (!openShift) throw new NoOpenShiftException();
 
-  async getTotalByShift(shiftRecordId: number): Promise<number> {
-    const result = await this.rawRepo.sum('total', {
-      shiftRecordId,
-      status: 'open',
-    });
-    return result ?? 0;
-  }
+        const order = this.rawRepo.create({
+            shiftRecordId: data.shiftRecordId,
+            cashierId:     currentUser.id,
+            total:         0,
+            status:        'open',
+        });
+        const saved = await this.rawRepo.save(order);
 
-  async recalculateTotal(userOrderId: number): Promise<void> {
-    const result = await this.rawRepo
-      .createQueryBuilder('o')
-      .leftJoin('o.items', 'i')
-      .select('COALESCE(SUM(i.subtotal), 0)', 'total')
-      .where('o.id = :userOrderId', { userOrderId })
-      .getRawOne<{ total: string }>();
+        return this.findOne(saved.id);
+    }
 
-    const total = Number(result?.total ?? 0);
-    await this.rawRepo.update(userOrderId, { total });
-  }
+    async markAsPaid(id: number, receiptNumber: string, options?: MutationOptions): Promise<void> {
+        const manager = options?.manager ?? this.rawRepo.manager;
+        await manager.update(UserOrder, id, { status: 'paid', receiptNumber });
+    }
+
+    async markAsVoided(id: number, voidReason: string, voidedBy: number, options?: MutationOptions): Promise<void> {
+        const manager = options?.manager ?? this.rawRepo.manager;
+        await manager.update(UserOrder, id, { status: 'voided', voidReason, voidedBy });
+    }
+
+    async recalculateTotal(userOrderId: number, options?: MutationOptions): Promise<void> {
+        const manager = options?.manager ?? this.rawRepo.manager;
+        const result = await manager
+            .createQueryBuilder(UserOrder, 'o')
+            .leftJoin('o.items', 'i')
+            .select('COALESCE(SUM(i.subtotal), 0)', 'total')
+            .where('o.id = :userOrderId', { userOrderId })
+            .getRawOne<{ total: string }>();
+
+        const total = Number(result?.total ?? 0);
+        await manager.update(UserOrder, userOrderId, { total });
+    }
+
+    async logVoid(id: number, voidReason: string, previousStatus: string, actingUser: AuthUser): Promise<void> {
+        await this.auditLog.create({
+            action:           AuditAction.SALE_VOIDED,
+            module:           AuditModule.ORDERS,
+            userId:           actingUser.id,
+            usernameSnapshot: actingUser.username,
+            roleSnapshot:     ROLE_NAMES[actingUser.roleId],
+            affectedEntity:   'user_orders',
+            entityId:         id,
+            previousValue:    previousStatus,
+            newValue:         JSON.stringify({ status: 'voided', voidReason }),
+        });
+    }
+
+    async logPaid(id: number, receiptNumber: string, actingUser: AuthUser): Promise<void> {
+        await this.auditLog.create({
+            action:           AuditAction.SALE_PAID,
+            module:           AuditModule.ORDERS,
+            userId:           actingUser.id,
+            usernameSnapshot: actingUser.username,
+            roleSnapshot:     ROLE_NAMES[actingUser.roleId],
+            affectedEntity:   'user_orders',
+            entityId:         id,
+            newValue:         receiptNumber,
+        });
+    }
 }

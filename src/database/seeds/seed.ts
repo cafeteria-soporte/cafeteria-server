@@ -46,8 +46,13 @@ async function seedRootUser(): Promise<void> {
   );
 
   if (existing.length > 0) {
+    const hashed = await hashPassword(password);
+    await AppDataSource.query(
+      `UPDATE users SET failed_attempts = 0, locked_until = NULL, password_hash = $2 WHERE username = $1`,
+      [username, hashed],
+    );
     console.log(
-      `  ${YELLOW}⚠  Usuario root ya existe${RESET} (${username}) — saltando.`,
+      `  ${YELLOW}⚠  Usuario root ya existe${RESET} (${username}) — reseteando bloqueo y contraseña.`,
     );
     return;
   }

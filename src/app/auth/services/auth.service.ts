@@ -15,9 +15,8 @@ import { AuditLogService } from 'src/modules/system-config/audit-log/services/au
 import { AuditAction } from 'src/modules/system-config/audit-log/enums/audit-action.enum';
 import { AuditModule } from 'src/modules/system-config/audit-log/enums/audit-module.enum';
 import { AuthUser } from '../strategies/jwt.strategy';
+import { GlobalSettingsService } from 'src/modules/system-config/global-settings/services/global-settings.service';
 
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCK_DURATION_MS = 30 * 60 * 1000;
 const ROLE_NAMES: Record<number, string> = { 1: 'root', 2: 'administrator', 3: 'cashier' };
 
 @Injectable()
@@ -26,6 +25,7 @@ export class AuthService {
         private readonly usersService: UsersService,
         private readonly jwtService: JwtService,
         private readonly auditLog: AuditLogService,
+        private readonly globalSettings: GlobalSettingsService,
     ) { }
 
     async login(dto: LoginDto): Promise<AuthResponseDto> {
@@ -47,9 +47,13 @@ export class AuthService {
         const passwordMatch = await comparePassword(dto.password, user.passwordHash);
 
         if (!passwordMatch) {
+            const maxAttemptsStr = await this.globalSettings.findValueByKey('max_login_attempts');
+            const sessionTimeoutStr = await this.globalSettings.findValueByKey('session_timeout_minutes');
+            const maxAttempts = parseInt(maxAttemptsStr ?? '5', 10);
+            const lockMs = parseInt(sessionTimeoutStr ?? '30', 10) * 60 * 1000;
             const newAttempts = user.failedAttempts + 1;
-            const lockedUntil = newAttempts >= MAX_LOGIN_ATTEMPTS
-                ? new Date(Date.now() + LOCK_DURATION_MS)
+            const lockedUntil = newAttempts >= maxAttempts
+                ? new Date(Date.now() + lockMs)
                 : null;
             await this.usersService.updateLoginAttempts(user.id, newAttempts, lockedUntil);
             await this.auditLog.create({

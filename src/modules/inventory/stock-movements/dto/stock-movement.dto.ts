@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DtoField, DtoRelation } from 'src/shared';
 import { StockMovementTypeDto } from '../../stock-movement-types/dto/stock-movement-type.dto';
+import { UserDto } from 'src/modules/user-management/users/dto/user.dto';
 
 export class StockMovementDto {
     @ApiProperty({ example: 1 })
@@ -38,4 +39,8 @@ export class StockMovementDto {
     @ApiProperty({ type: () => StockMovementTypeDto })
     @DtoRelation(() => StockMovementTypeDto)
     movementType: StockMovementTypeDto;
+
+    @ApiProperty({ type: UserDto})
+    @DtoRelation(() => UserDto)
+    user: UserDto;
 }

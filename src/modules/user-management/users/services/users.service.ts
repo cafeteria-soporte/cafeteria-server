@@ -14,6 +14,8 @@ import { FindUsersDto } from '../dto/in/find-users.dto';
 import { UserAuthDto } from '../dto/user-auth.dto';
 import { UserDto } from '../dto/user.dto';
 import { hashPassword } from 'src/shared/utils/crypto.util';
+import { RolesService } from '../../roles/services/roles.service';
+import { RoleDto } from '../../roles/dto/role.dto';
 
 @Injectable()
 export class UsersService {
@@ -22,17 +24,18 @@ export class UsersService {
     constructor(
         @InjectRepository(User)
         private readonly rawRepo: Repository<User>,
+        private readonly rolesService: RolesService,
     ) {
         this.repo = new DtoRepository(rawRepo);
     }
 
     async findAll(params: FindUsersDto): Promise<PaginationResponseDto<UserDto>> {
         return this.repo.findPaginated({
-            dto: UserDto,
+            dto:        UserDto,
             pagination: params,
             where: {
-                ...(params.active  !== undefined && { active: params.active }),
-                ...(params.roleId  !== undefined && { roleId: params.roleId }),
+                ...(params.active !== undefined && { active: params.active }),
+                ...(params.roleId !== undefined && { roleId: params.roleId }),
             },
             order: { id: 'ASC' },
         });
@@ -51,19 +54,21 @@ export class UsersService {
     }
 
     async create<T>(data: CreateUserDto, createdById: number | null, dto: new () => T): Promise<T> {
+        await this.rolesService.findOne(data.roleId, { dto: RoleDto, throwException: true });
+
         const exists = await this.findOneByUsername(data.username.trim(), {
             throwException: false,
             dto: UserAuthDto,
         });
         if (exists) throw new UsernameAlreadyTakenException();
 
-        const user = new User();
-        user.fullName = data.fullName.trim();
-        user.username = data.username.trim();
-        user.email = data.email?.trim() ?? null;
+        const user        = new User();
+        user.fullName     = data.fullName.trim();
+        user.username     = data.username.trim();
+        user.email        = data.email?.trim() ?? null;
         user.passwordHash = await hashPassword(data.password);
-        user.roleId = data.roleId;
-        user.createdById = createdById;
+        user.roleId       = data.roleId;
+        user.createdById  = createdById;
 
         const saved = await this.rawRepo.save(user);
         return (await this.findOneById(saved.id, { throwException: false, dto }))!;
