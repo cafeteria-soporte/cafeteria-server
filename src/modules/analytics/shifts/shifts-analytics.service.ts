@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { ShiftsFilterDto } from './dto/in/shifts-filter.dto';
+import { ExportFormat, ShiftsExportFilterDto } from './dto/in/shifts-export-filter.dto';
 import { VoidsByReasonDto } from './dto/out/voids-by-reason.dto';
 import { VoidsByCashierDto } from './dto/out/voids-by-cashier.dto';
 import { DiscrepancyDto } from './dto/out/discrepancy.dto';
@@ -242,6 +243,118 @@ export class ShiftsAnalyticsService {
                 })),
             },
         };
+    }
+
+    async exportDiscrepancies(filter: ShiftsExportFilterDto): Promise<StreamableFile> {
+        const data = await this.findDiscrepancies(filter);
+
+        if (filter.format === ExportFormat.PDF) {
+            return this.generatePdfDiscrepancies(data, filter);
+        }
+        return this.generateCsvDiscrepancies(data, filter);
+    }
+
+    private generateCsvDiscrepancies(data: DiscrepancyDto[], filter: ShiftsFilterDto): StreamableFile {
+        const header = 'Turno,Cajero,Usuario,Inicio,Cierre,Fondo Inicial,Esperado,Declarado,Descuadre,Alerta\n';
+        const rows   = data.map(r =>
+            `${r.shiftRecordId},${r.cashierName},${r.cashierUsername},${r.openedAt},${r.closedAt},${r.initialFund.toFixed(2)},${r.expectedAmount?.toFixed(2) ?? ''},${r.declaredAmount?.toFixed(2) ?? ''},${r.discrepancy?.toFixed(2) ?? ''},${r.discrepancyAlert ? 'SI' : 'NO'}`
+        ).join('\n');
+        const buffer = Buffer.from(header + rows, 'utf-8');
+        return new StreamableFile(buffer, {
+            type:        'text/csv',
+            disposition: 'attachment; filename="reporte-descuadres.csv"',
+        });
+    }
+
+    private async generatePdfDiscrepancies(data: DiscrepancyDto[], filter: ShiftsFilterDto): Promise<StreamableFile> {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const pdfmake = require('pdfmake') as {
+            virtualfs: { writeFileSync(name: string, data: Buffer): void };
+            addFonts(fonts: Record<string, unknown>): void;
+            createPdf(def: Record<string, unknown>): { getBuffer(): Promise<Buffer> };
+        };
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const vfs = require('pdfmake/build/vfs_fonts') as Record<string, string>;
+
+        Object.entries(vfs).forEach(([name, data]) => {
+            pdfmake.virtualfs.writeFileSync(name, Buffer.from(data, 'base64'));
+        });
+        pdfmake.addFonts({
+            Roboto: {
+                normal:      'Roboto-Regular.ttf',
+                bold:        'Roboto-Medium.ttf',
+                italics:     'Roboto-Italic.ttf',
+                bolditalics: 'Roboto-MediumItalic.ttf',
+            },
+        });
+
+        const totalShifts     = data.length;
+        const alertCount      = data.filter(r => r.discrepancyAlert).length;
+        const discrepancies   = data.filter(r => r.discrepancy !== null).map(r => r.discrepancy!);
+        const avgDiscrepancy  = discrepancies.length > 0
+            ? discrepancies.reduce((s, v) => s + v, 0) / discrepancies.length
+            : 0;
+        const periodLabel     = `${filter.from ?? 'inicio'} — ${filter.to ?? 'hoy'}`;
+
+        const docDef = {
+            content: [
+                { text: 'Reporte de Descuadres — Cafetería', style: 'header' },
+                { text: `Período: ${periodLabel}`, style: 'subheader' },
+
+                { text: 'Resumen General', style: 'section' },
+                {
+                    columns: [
+                        { text: `Turnos Cerrados\n${totalShifts}`,         style: 'kpi' },
+                        { text: `Con Alerta\n${alertCount}`,               style: 'kpi' },
+                        { text: `Promedio Descuadre\nBs ${avgDiscrepancy.toFixed(2)}`, style: 'kpi' },
+                    ],
+                    margin: [0, 0, 0, 16],
+                },
+
+                { text: 'Detalle de Descuadres', style: 'section' },
+                data.length > 0 ? {
+                    table: {
+                        headerRows: 1,
+                        widths: ['auto', '*', '*', 'auto', 'auto', 'auto', 'auto'],
+                        body: [
+                            [
+                                { text: 'Turno',     bold: true },
+                                { text: 'Cajero',    bold: true },
+                                { text: 'Usuario',   bold: true },
+                                { text: 'F. Inicial', bold: true },
+                                { text: 'Esperado',  bold: true },
+                                { text: 'Declarado', bold: true },
+                                { text: 'Descuadre', bold: true },
+                            ],
+                            ...data.map(r => [
+                                String(r.shiftRecordId),
+                                r.cashierName,
+                                r.cashierUsername,
+                                r.initialFund.toFixed(2),
+                                r.expectedAmount?.toFixed(2) ?? '-',
+                                r.declaredAmount?.toFixed(2) ?? '-',
+                                r.discrepancy !== null
+                                    ? `${r.discrepancy.toFixed(2)} ${r.discrepancyAlert ? '⚠' : ''}`
+                                    : '-',
+                            ]),
+                        ],
+                    },
+                } : { text: 'Sin datos para este período.', italics: true },
+            ],
+            styles: {
+                header:    { fontSize: 18, bold: true, margin: [0, 0, 0, 4] },
+                subheader: { fontSize: 11, color: '#555555', margin: [0, 0, 0, 20] },
+                section:   { fontSize: 13, bold: true, margin: [0, 8, 0, 6] },
+                kpi:       { fontSize: 11, alignment: 'center' as const },
+            },
+            defaultStyle: { font: 'Roboto', fontSize: 10 },
+        };
+
+        const buffer = await pdfmake.createPdf(docDef as any).getBuffer();
+        return new StreamableFile(buffer, {
+            type:        'application/pdf',
+            disposition: 'attachment; filename="reporte-descuadres.pdf"',
+        });
     }
 
     private buildDateWhere(from?: string, to?: string): { where: string; params: unknown[] } {

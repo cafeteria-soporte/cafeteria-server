@@ -1,9 +1,10 @@
-import { Controller, Get, Param, ParseIntPipe, Query, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query, StreamableFile, UseInterceptors } from '@nestjs/common';
 import { ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdministratorUp } from 'src/app/auth/decorators';
 import { AnalyticsAuditInterceptor } from '../interceptors/analytics-audit.interceptor';
 import { ShiftsAnalyticsService } from './shifts-analytics.service';
 import { ShiftsFilterDto } from './dto/in/shifts-filter.dto';
+import { ShiftsExportFilterDto } from './dto/in/shifts-export-filter.dto';
 import { VoidsByReasonDto } from './dto/out/voids-by-reason.dto';
 import { VoidsByCashierDto } from './dto/out/voids-by-cashier.dto';
 import { DiscrepancyDto } from './dto/out/discrepancy.dto';
@@ -44,6 +45,15 @@ export class ShiftsAnalyticsController {
     @ApiOkResponse({ type: DiscrepancyDto, isArray: true })
     findDiscrepancies(@Query() filter: ShiftsFilterDto): Promise<DiscrepancyDto[]> {
         return this.service.findDiscrepancies(filter);
+    }
+
+    @Get('discrepancies/export')
+    @ApiOperation({
+        summary: 'Exportar reporte de descuadres en PDF/CSV (Admin+)',
+        description: 'Descarga el reporte completo de descuadres en PDF o CSV. Usa ?format=pdf o ?format=csv.',
+    })
+    exportDiscrepancies(@Query() filter: ShiftsExportFilterDto): Promise<StreamableFile> {
+        return this.service.exportDiscrepancies(filter);
     }
 
     @Get(':id/summary')
