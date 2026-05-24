@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { ShiftsFilterDto } from './dto/in/shifts-filter.dto';
 import { VoidsByReasonDto } from './dto/out/voids-by-reason.dto';
 import { VoidsByCashierDto } from './dto/out/voids-by-cashier.dto';
 import { DiscrepancyDto } from './dto/out/discrepancy.dto';
+import { ShiftSummaryDto } from './dto/out/shift-summary.dto';
 
 @Injectable()
 export class ShiftsAnalyticsService {
@@ -117,6 +118,130 @@ export class ShiftsAnalyticsService {
             discrepancy:      r.discrepancy !== null ? Number(r.discrepancy) : null,
             discrepancyAlert: r.discrepancy_alert,
         }));
+    }
+
+    async findSummaryById(id: number): Promise<ShiftSummaryDto> {
+        const shiftRows = await this.dataSource.query<Array<{
+            shift_record_id: number;
+            cashier_id: number;
+            cashier_name: string;
+            cashier_username: string;
+            initial_fund: string;
+            expected_amount: string;
+            declared_amount: string;
+            discrepancy: string;
+            discrepancy_alert: boolean;
+            opened_at: Date;
+            closed_at: Date;
+        }>>(
+            `SELECT
+                sr.shift_record_id,
+                sr.cashier_id,
+                u.full_name   AS cashier_name,
+                u.username    AS cashier_username,
+                sr.initial_fund,
+                sr.expected_amount,
+                sr.declared_amount,
+                sr.discrepancy,
+                sr.discrepancy_alert,
+                sr.opened_at,
+                sr.closed_at
+             FROM shift_records sr
+             LEFT JOIN users u ON u.user_id = sr.cashier_id
+             WHERE sr.shift_record_id = $1 AND sr.status = 'closed'`,
+            [id],
+        );
+
+        if (shiftRows.length === 0) {
+            throw new NotFoundException(`Turno ${id} no encontrado o no está cerrado`);
+        }
+
+        const s = shiftRows[0];
+
+        const [voidRows, paymentRows, totalRow] = await Promise.all([
+            this.dataSource.query<Array<{ reason: string; count: string; total_amount: string }>>(
+                `SELECT
+                    void_reason AS reason,
+                    COUNT(*) AS count,
+                    COALESCE(SUM(total), 0) AS total_amount
+                 FROM user_orders
+                 WHERE shift_record_id = $1
+                   AND status = 'voided'
+                   AND void_reason IS NOT NULL
+                   AND void_reason != ''
+                 GROUP BY void_reason
+                 ORDER BY count DESC`,
+                [id],
+            ),
+            this.dataSource.query<Array<{
+                payment_method_id: number;
+                payment_method_name: string;
+                count: string;
+                total_amount: string;
+            }>>(
+                `SELECT
+                    pm.payment_method_id,
+                    pm.name AS payment_method_name,
+                    COUNT(op.order_payment_id) AS count,
+                    COALESCE(SUM(op.amount), 0) AS total_amount
+                 FROM order_payments op
+                 JOIN user_orders uo ON uo.user_order_id = op.user_order_id
+                 JOIN payment_methods pm ON pm.payment_method_id = op.payment_method_id
+                 WHERE uo.shift_record_id = $1
+                   AND uo.status = 'paid'
+                 GROUP BY pm.payment_method_id, pm.name
+                 ORDER BY total_amount DESC`,
+                [id],
+            ),
+            this.dataSource.query<Array<{ total: string }>>(
+                `SELECT COALESCE(SUM(op.amount), 0) AS total
+                 FROM order_payments op
+                 JOIN user_orders uo ON uo.user_order_id = op.user_order_id
+                 WHERE uo.shift_record_id = $1 AND uo.status = 'paid'`,
+                [id],
+            ),
+        ]);
+
+        const totalCollected = Number(totalRow[0]?.total ?? 0);
+        const totalVoidedOrders = voidRows.reduce((sum, r) => sum + Number(r.count), 0);
+        const totalVoidedAmount = voidRows.reduce((sum, r) => sum + Number(r.total_amount), 0);
+
+        return {
+            shiftId:        Number(s.shift_record_id),
+            cashierId:      Number(s.cashier_id),
+            cashierName:    s.cashier_name,
+            cashierUsername: s.cashier_username,
+            openedAt:       s.opened_at.toISOString(),
+            closedAt:       s.closed_at.toISOString(),
+            financial: {
+                initialFund:      Number(s.initial_fund),
+                expectedAmount:   s.expected_amount !== null ? Number(s.expected_amount) : null,
+                declaredAmount:   s.declared_amount !== null ? Number(s.declared_amount) : null,
+                discrepancy:      s.discrepancy !== null ? Number(s.discrepancy) : null,
+                discrepancyAlert: s.discrepancy_alert,
+            },
+            losses: {
+                totalVoidedOrders,
+                totalVoidedAmount,
+                reasons: voidRows.map(r => ({
+                    reason:      r.reason,
+                    count:       Number(r.count),
+                    totalAmount: Number(r.total_amount),
+                })),
+            },
+            payments: {
+                totalCollected,
+                methods: paymentRows.map(r => ({
+                    paymentMethodId:   Number(r.payment_method_id),
+                    paymentMethodName: r.payment_method_name,
+                    count:             Number(r.count),
+                    totalAmount:       Number(r.total_amount),
+                    percentage:        totalCollected > 0
+                        ? Math.round((Number(r.total_amount) / totalCollected) * 1000) / 10
+                        : 0,
+                })),
+            },
+        };
     }
 
     private buildDateWhere(from?: string, to?: string): { where: string; params: unknown[] } {

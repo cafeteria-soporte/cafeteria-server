@@ -1,5 +1,5 @@
-import { Controller, Get, Query, UseInterceptors } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Param, ParseIntPipe, Query, UseInterceptors } from '@nestjs/common';
+import { ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdministratorUp } from 'src/app/auth/decorators';
 import { AnalyticsAuditInterceptor } from '../interceptors/analytics-audit.interceptor';
 import { ShiftsAnalyticsService } from './shifts-analytics.service';
@@ -7,6 +7,7 @@ import { ShiftsFilterDto } from './dto/in/shifts-filter.dto';
 import { VoidsByReasonDto } from './dto/out/voids-by-reason.dto';
 import { VoidsByCashierDto } from './dto/out/voids-by-cashier.dto';
 import { DiscrepancyDto } from './dto/out/discrepancy.dto';
+import { ShiftSummaryDto } from './dto/out/shift-summary.dto';
 
 @ApiTags('Analytics - Turnos')
 @Controller('analytics/shifts')
@@ -43,5 +44,16 @@ export class ShiftsAnalyticsController {
     @ApiOkResponse({ type: DiscrepancyDto, isArray: true })
     findDiscrepancies(@Query() filter: ShiftsFilterDto): Promise<DiscrepancyDto[]> {
         return this.service.findDiscrepancies(filter);
+    }
+
+    @Get(':id/summary')
+    @ApiOperation({
+        summary: 'Resumen analítico y financiero de un turno',
+        description: 'Devuelve el desglose completo de un turno cerrado: descuadre financiero, pérdidas por anulaciones y composición de ingresos por método de pago.',
+    })
+    @ApiOkResponse({ type: ShiftSummaryDto })
+    @ApiNotFoundResponse({ description: 'Turno no encontrado o no está cerrado' })
+    findSummary(@Param('id', ParseIntPipe) id: number): Promise<ShiftSummaryDto> {
+        return this.service.findSummaryById(id);
     }
 }
