@@ -17,22 +17,22 @@ import { ApiProperty } from '@nestjs/swagger';
  *   }
  */
 export class ValidationExceptionDto {
-    @ApiProperty({ example: 400 })
-    statusCode: number;
+  @ApiProperty({ example: 400 })
+  statusCode: number;
 
-    @ApiProperty({ example: 'BAD_REQUEST' })
-    error: string;
+  @ApiProperty({ example: 'BAD_REQUEST' })
+  error: string;
 
-    @ApiProperty({
-        description: 'Lista de campos inválidos — uno por cada falla de validación',
-        type: [String],
-        example: ['title must be a string', 'title should not be empty'],
-    })
-    message: string[];
+  @ApiProperty({
+    description: 'Lista de campos inválidos — uno por cada falla de validación',
+    type: [String],
+    example: ['title must be a string', 'title should not be empty'],
+  })
+  message: string[];
 
-    @ApiProperty({ example: '/api/examples' })
-    path: string;
+  @ApiProperty({ example: '/api/examples' })
+  path: string;
 
-    @ApiProperty({ example: '2024-01-01T00:00:00.000Z' })
-    timestamp: string;
+  @ApiProperty({ example: '2024-01-01T00:00:00.000Z' })
+  timestamp: string;
 }

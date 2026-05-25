@@ -15,17 +15,17 @@ import { ConfirmPaymentUseCase } from 'src/app/sales/use-cases/confirm-payment.u
 import { VoidOrderUseCase } from 'src/app/sales/use-cases/void-order.use-case';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([UserOrder, OrderItem, OrderPayment]),
-        forwardRef(() => ShiftRecordsModule),
-        forwardRef(() => OrderItemsModule),
-        forwardRef(() => OrderPaymentsModule),
-        StockMovementsModule,
-        StockMovementTypesModule,
-        GlobalSettingsModule,
-    ],
-    controllers: [UserOrdersController],
-    providers:   [UserOrdersService, ConfirmPaymentUseCase, VoidOrderUseCase],
-    exports:     [UserOrdersService],
+  imports: [
+    TypeOrmModule.forFeature([UserOrder, OrderItem, OrderPayment]),
+    forwardRef(() => ShiftRecordsModule),
+    forwardRef(() => OrderItemsModule),
+    forwardRef(() => OrderPaymentsModule),
+    StockMovementsModule,
+    StockMovementTypesModule,
+    GlobalSettingsModule,
+  ],
+  controllers: [UserOrdersController],
+  providers: [UserOrdersService, ConfirmPaymentUseCase, VoidOrderUseCase],
+  exports: [UserOrdersService],
 })
 export class UserOrdersModule {}

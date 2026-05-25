@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Param, Query, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  ParseIntPipe,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -22,7 +32,9 @@ export class ShiftRecordsController {
 
   @Get()
   @AdministratorUp()
-  @ApiOperation({ summary: 'Listar todos los turnos (Admin+) con filtros opcionales' })
+  @ApiOperation({
+    summary: 'Listar todos los turnos (Admin+) con filtros opcionales',
+  })
   @ApiOkResponse({ type: FindAllShiftRecordsResponseDto })
   findAll(@Query() params: FindShiftRecordsDto) {
     return this.shiftService.findAll(params);
@@ -32,7 +44,10 @@ export class ShiftRecordsController {
   @CashierUp()
   @ApiOperation({ summary: 'Listar mis turnos (cajero autenticado)' })
   @ApiOkResponse({ type: FindAllShiftRecordsResponseDto })
-  findMine(@CurrentUser() currentUser: AuthUser, @Query() params: FindShiftRecordsDto) {
+  findMine(
+    @CurrentUser() currentUser: AuthUser,
+    @Query() params: FindShiftRecordsDto,
+  ) {
     return this.shiftService.findAllMine(currentUser.id, params);
   }
 
@@ -64,8 +79,12 @@ export class ShiftRecordsController {
   @Post('close')
   @CashierUp()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Cierre de turno ciego (el cajero no ve el monto esperado)' })
-  @ApiOkResponse({ description: 'Turno cerrado. Devuelve si hubo alerta de descuadre.' })
+  @ApiOperation({
+    summary: 'Cierre de turno ciego (el cajero no ve el monto esperado)',
+  })
+  @ApiOkResponse({
+    description: 'Turno cerrado. Devuelve si hubo alerta de descuadre.',
+  })
   close(@CurrentUser() currentUser: AuthUser, @Body() dto: CloseShiftDto) {
     return this.shiftService.closeShift(currentUser, dto);
   }

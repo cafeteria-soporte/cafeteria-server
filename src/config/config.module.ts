@@ -53,14 +53,14 @@ const CONFIG_PROVIDERS = [AppConfig];
  */
 @Global()
 @Module({
-    imports: [
-        ConfigModule.forRoot({
-            isGlobal:         true,      // ConfigService disponible en toda la app
-            envFilePath:      '.env',    // ruta al archivo de variables de entorno
-            validationSchema: envValidation, // Joi valida y tipifica las variables
-        }),
-    ],
-    providers: CONFIG_PROVIDERS,
-    exports:   CONFIG_PROVIDERS, // exportar = disponibles globalmente gracias a @Global()
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true, // ConfigService disponible en toda la app
+      envFilePath: '.env', // ruta al archivo de variables de entorno
+      validationSchema: envValidation, // Joi valida y tipifica las variables
+    }),
+  ],
+  providers: CONFIG_PROVIDERS,
+  exports: CONFIG_PROVIDERS, // exportar = disponibles globalmente gracias a @Global()
 })
 export class AppConfigModule {}

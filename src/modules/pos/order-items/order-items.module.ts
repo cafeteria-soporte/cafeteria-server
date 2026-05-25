@@ -7,9 +7,13 @@ import { UserOrdersModule } from '../user-orders/user-orders.module';
 import { ProductsModule } from 'src/modules/product-catalog/products/products.module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([OrderItem]), forwardRef(() => UserOrdersModule), ProductsModule],
-    controllers: [OrderItemsController],
-    providers: [OrderItemsService],
-    exports: [OrderItemsService],
+  imports: [
+    TypeOrmModule.forFeature([OrderItem]),
+    forwardRef(() => UserOrdersModule),
+    ProductsModule,
+  ],
+  controllers: [OrderItemsController],
+  providers: [OrderItemsService],
+  exports: [OrderItemsService],
 })
 export class OrderItemsModule {}

@@ -15,47 +15,49 @@ import { HttpExceptionFilter } from './shared/filters';
 types.setTypeParser(20, Number);
 
 async function bootstrap() {
-	const { logger, swagger } = getEnvSettings(process.env.NODE_ENV);
+  const { logger, swagger } = getEnvSettings(process.env.NODE_ENV);
 
-	const app = await NestFactory.create(AppModule, { logger });
+  const app = await NestFactory.create(AppModule, { logger });
 
-	const cfg = app.get(AppConfig);
+  const cfg = app.get(AppConfig);
 
-	app.setGlobalPrefix(cfg.apiPrefix);
+  app.setGlobalPrefix(cfg.apiPrefix);
 
-	if (swagger) {
-		setupSwagger(app, {
-			title: 'Cafeteria Server documentation',
-			description: 'Documentación API',
-			version: '1.0',
-			path: 'api/cafeteria/docs',
-		});
-	}
+  if (swagger) {
+    setupSwagger(app, {
+      title: 'Cafeteria Server documentation',
+      description: 'Documentación API',
+      version: '1.0',
+      path: 'api/cafeteria/docs',
+    });
+  }
 
-	app.enableCors(getCorsOptions(cfg.domainFrontend));
+  app.enableCors(getCorsOptions(cfg.domainFrontend));
 
-	app.useGlobalPipes(new ValidationPipe({
-		transform: true,
-		whitelist: true,
-		forbidNonWhitelisted: true,
-		transformOptions: { enableImplicitConversion: false },
-	}));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transformOptions: { enableImplicitConversion: false },
+    }),
+  );
 
-	app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalFilters(new HttpExceptionFilter());
 
-	await app.listen(cfg.port);
+  await app.listen(cfg.port);
 
-	const jwtCfg = app.get(JwtConfig,      { strict: false });
-	const dbCfg = app.get(DatabaseConfig, { strict: false });
+  const jwtCfg = app.get(JwtConfig, { strict: false });
+  const dbCfg = app.get(DatabaseConfig, { strict: false });
 
-	logServerStatus(cfg, 'Cafeteria Server', {
-		swagger: swagger,
-		docsPath: 'api/cafeteria/docs',
-		jwtActive: jwtCfg.isActive,
-		dbLogs: dbCfg.logging,
-		cors: cfg.domainFrontend,
-		database: `${dbCfg.host}:${dbCfg.port}/${dbCfg.database}`,
-		logLevels: logger,
-	});
+  logServerStatus(cfg, 'Cafeteria Server', {
+    swagger: swagger,
+    docsPath: 'api/cafeteria/docs',
+    jwtActive: jwtCfg.isActive,
+    dbLogs: dbCfg.logging,
+    cors: cfg.domainFrontend,
+    database: `${dbCfg.host}:${dbCfg.port}/${dbCfg.database}`,
+    logLevels: logger,
+  });
 }
 bootstrap();

@@ -10,22 +10,29 @@ import { FindAllStockMovementTypesResponseDto } from '../dto/out/find-all-stock-
 @ApiTags('Stock Movement Types')
 @Controller('stock-movement-types')
 export class StockMovementTypesController {
-    constructor(private readonly service: StockMovementTypesService) {}
+  constructor(private readonly service: StockMovementTypesService) {}
 
-    @CashierUp()
-    @Get()
-    @ApiOperation({ summary: 'Listar tipos de movimiento de stock paginados' })
-    @ApiOkResponse({ type: FindAllStockMovementTypesResponseDto })
-    findAll(@Query() params: FindStockMovementTypesDto): Promise<FindAllStockMovementTypesResponseDto> {
-        return this.service.findAll(params);
-    }
+  @CashierUp()
+  @Get()
+  @ApiOperation({ summary: 'Listar tipos de movimiento de stock paginados' })
+  @ApiOkResponse({ type: FindAllStockMovementTypesResponseDto })
+  findAll(
+    @Query() params: FindStockMovementTypesDto,
+  ): Promise<FindAllStockMovementTypesResponseDto> {
+    return this.service.findAll(params);
+  }
 
-    @CashierUp()
-    @Get(':id')
-    @ApiOperation({ summary: 'Obtener tipo de movimiento por ID' })
-    @ApiOkResponse({ type: StockMovementTypeDto })
-    @ApiNotFound()
-    findOne(@Param('id', ParseIntPipe) id: number): Promise<StockMovementTypeDto> {
-        return this.service.findOne(id, { dto: StockMovementTypeDto, throwException: true }) as Promise<StockMovementTypeDto>;
-    }
+  @CashierUp()
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtener tipo de movimiento por ID' })
+  @ApiOkResponse({ type: StockMovementTypeDto })
+  @ApiNotFound()
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<StockMovementTypeDto> {
+    return this.service.findOne(id, {
+      dto: StockMovementTypeDto,
+      throwException: true,
+    });
+  }
 }

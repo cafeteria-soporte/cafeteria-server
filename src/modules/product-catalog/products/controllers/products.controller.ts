@@ -43,7 +43,9 @@ export class ProductsController {
 
   @Get('low-stock')
   @AdministratorUp()
-  @ApiOperation({ summary: 'Listar productos con stock igual o por debajo del mínimo' })
+  @ApiOperation({
+    summary: 'Listar productos con stock igual o por debajo del mínimo',
+  })
   @ApiOkResponse({ type: [ProductDto] })
   findLowStock() {
     return this.productsService.findLowStock();
@@ -62,7 +64,10 @@ export class ProductsController {
   @ApiOperation({ summary: 'Obtener un producto por ID' })
   @ApiOkResponse({ type: ProductDto })
   findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.productsService.findOne(id, { dto: ProductDto, throwException: true });
+    return this.productsService.findOne(id, {
+      dto: ProductDto,
+      throwException: true,
+    });
   }
 
   @Patch(':id')

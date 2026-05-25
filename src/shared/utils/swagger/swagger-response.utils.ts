@@ -1,11 +1,11 @@
 import { applyDecorators } from '@nestjs/common';
 import {
-    ApiNotFoundResponse,
-    ApiBadRequestResponse,
-    ApiUnauthorizedResponse,
-    ApiForbiddenResponse,
-    ApiConflictResponse,
-    ApiUnprocessableEntityResponse,
+  ApiNotFoundResponse,
+  ApiBadRequestResponse,
+  ApiUnauthorizedResponse,
+  ApiForbiddenResponse,
+  ApiConflictResponse,
+  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { ErrorResponseDto, ValidationExceptionDto } from 'src/shared/dto';
 
@@ -38,57 +38,57 @@ import { ErrorResponseDto, ValidationExceptionDto } from 'src/shared/dto';
 
 /** 404 — El recurso solicitado no existe o no está disponible. */
 export const ApiNotFound = () =>
-    applyDecorators(
-        ApiNotFoundResponse({
-            description: 'El recurso solicitado no fue encontrado.',
-            type: ErrorResponseDto,
-        }),
-    );
+  applyDecorators(
+    ApiNotFoundResponse({
+      description: 'El recurso solicitado no fue encontrado.',
+      type: ErrorResponseDto,
+    }),
+  );
 
 /** 409 — Ya existe un registro con los mismos datos únicos (ej. email duplicado). */
 export const ApiConflict = () =>
-    applyDecorators(
-        ApiConflictResponse({
-            description: 'Ya existe un registro con esos datos.',
-            type: ErrorResponseDto,
-        }),
-    );
+  applyDecorators(
+    ApiConflictResponse({
+      description: 'Ya existe un registro con esos datos.',
+      type: ErrorResponseDto,
+    }),
+  );
 
 /** 401 — Token JWT inválido, expirado o ausente. */
 export const ApiUnauthorized = () =>
-    applyDecorators(
-        ApiUnauthorizedResponse({
-            description: 'Token inválido o expirado.',
-            type: ErrorResponseDto,
-        }),
-    );
+  applyDecorators(
+    ApiUnauthorizedResponse({
+      description: 'Token inválido o expirado.',
+      type: ErrorResponseDto,
+    }),
+  );
 
 /** 403 — El usuario está autenticado pero no tiene permisos para esta acción. */
 export const ApiForbidden = () =>
-    applyDecorators(
-        ApiForbiddenResponse({
-            description: 'No tienes permiso para realizar esta acción.',
-            type: ErrorResponseDto,
-        }),
-    );
+  applyDecorators(
+    ApiForbiddenResponse({
+      description: 'No tienes permiso para realizar esta acción.',
+      type: ErrorResponseDto,
+    }),
+  );
 
 /**
  * 400 — El body o los query params no pasaron la validación del ValidationPipe.
  * El `message` es un array con un error por cada campo inválido.
  */
 export const ApiValidationError = () =>
-    applyDecorators(
-        ApiBadRequestResponse({
-            description: 'Datos de entrada inválidos.',
-            type: ValidationExceptionDto,
-        }),
-    );
+  applyDecorators(
+    ApiBadRequestResponse({
+      description: 'Datos de entrada inválidos.',
+      type: ValidationExceptionDto,
+    }),
+  );
 
 /** 422 — Los datos son válidos en formato pero no pueden procesarse (ej. stock insuficiente). */
 export const ApiUnprocessableEntity = () =>
-    applyDecorators(
-        ApiUnprocessableEntityResponse({
-            description: 'Los datos no pueden procesarse en el estado actual.',
-            type: ErrorResponseDto,
-        }),
-    );
+  applyDecorators(
+    ApiUnprocessableEntityResponse({
+      description: 'Los datos no pueden procesarse en el estado actual.',
+      type: ErrorResponseDto,
+    }),
+  );

@@ -7,9 +7,13 @@ import { ProductsModule } from 'src/modules/product-catalog/products/products.mo
 import { StockMovementTypesModule } from '../stock-movement-types/stock-movement-types.module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([StockMovement]), ProductsModule, StockMovementTypesModule],
-    controllers: [StockMovementsController],
-    providers: [StockMovementsService],
-    exports: [StockMovementsService],
+  imports: [
+    TypeOrmModule.forFeature([StockMovement]),
+    ProductsModule,
+    StockMovementTypesModule,
+  ],
+  controllers: [StockMovementsController],
+  providers: [StockMovementsService],
+  exports: [StockMovementsService],
 })
 export class StockMovementsModule {}

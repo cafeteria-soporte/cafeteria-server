@@ -10,22 +10,25 @@ import { FindAllRolesResponseDto } from '../dto/out/find-all-roles-response.dto'
 @ApiTags('Roles')
 @Controller('roles')
 export class RolesController {
-    constructor(private readonly rolesService: RolesService) {}
+  constructor(private readonly rolesService: RolesService) {}
 
-    @AdministratorUp()
-    @Get()
-    @ApiOperation({ summary: 'Listar roles paginados' })
-    @ApiOkResponse({ type: FindAllRolesResponseDto })
-    findAll(@Query() params: FindRolesDto): Promise<FindAllRolesResponseDto> {
-        return this.rolesService.findAll(params);
-    }
+  @AdministratorUp()
+  @Get()
+  @ApiOperation({ summary: 'Listar roles paginados' })
+  @ApiOkResponse({ type: FindAllRolesResponseDto })
+  findAll(@Query() params: FindRolesDto): Promise<FindAllRolesResponseDto> {
+    return this.rolesService.findAll(params);
+  }
 
-    @AdministratorUp()
-    @Get(':id')
-    @ApiOperation({ summary: 'Obtener rol por ID' })
-    @ApiOkResponse({ type: RoleDto })
-    @ApiNotFound()
-    findOne(@Param('id', ParseIntPipe) id: number): Promise<RoleDto> {
-        return this.rolesService.findOne(id, { dto: RoleDto, throwException: true }) as Promise<RoleDto>;
-    }
+  @AdministratorUp()
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtener rol por ID' })
+  @ApiOkResponse({ type: RoleDto })
+  @ApiNotFound()
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<RoleDto> {
+    return this.rolesService.findOne(id, {
+      dto: RoleDto,
+      throwException: true,
+    });
+  }
 }

@@ -8,16 +8,17 @@ export type MailerTransport = 'smtp' | 'api';
 @Global()
 @Module({})
 export class MailerModule {
-    static register(transport?: MailerTransport): DynamicModule {
-        const chosen: MailerTransport =
-            transport ?? ((process.env.MAILER_TRANSPORT as MailerTransport) || 'smtp');
+  static register(transport?: MailerTransport): DynamicModule {
+    const chosen: MailerTransport =
+      transport ??
+      ((process.env.MAILER_TRANSPORT as MailerTransport) || 'smtp');
 
-        const adapterModule = chosen === 'api' ? ApiMailerModule : SmtpMailerModule;
+    const adapterModule = chosen === 'api' ? ApiMailerModule : SmtpMailerModule;
 
-        return {
-            module: MailerModule,
-            imports: [adapterModule],
-            exports: [MailerPort],
-        };
-    }
+    return {
+      module: MailerModule,
+      imports: [adapterModule],
+      exports: [MailerPort],
+    };
+  }
 }

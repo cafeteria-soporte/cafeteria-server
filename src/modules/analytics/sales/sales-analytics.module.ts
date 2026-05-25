@@ -4,7 +4,7 @@ import { SalesAnalyticsService } from './sales-analytics.service';
 import { AnalyticsAuditInterceptor } from '../interceptors/analytics-audit.interceptor';
 
 @Module({
-    controllers: [SalesAnalyticsController],
-    providers:   [SalesAnalyticsService, AnalyticsAuditInterceptor],
+  controllers: [SalesAnalyticsController],
+  providers: [SalesAnalyticsService, AnalyticsAuditInterceptor],
 })
 export class SalesAnalyticsModule {}

@@ -3,12 +3,12 @@ import { StockMovement } from '../../stock-movements/entities/stock-movement.ent
 
 @Entity('stock_movement_types')
 export class StockMovementType {
-    @PrimaryGeneratedColumn({ name: 'movement_type_id', type: 'int' })
-    id: number;
+  @PrimaryGeneratedColumn({ name: 'movement_type_id', type: 'int' })
+  id: number;
 
-    @Column({ name: 'name', type: 'varchar', length: 50, unique: true })
-    name: string;
+  @Column({ name: 'name', type: 'varchar', length: 50, unique: true })
+  name: string;
 
-    @OneToMany(() => StockMovement, (m) => m.movementType)
-    movements?: StockMovement[];
+  @OneToMany(() => StockMovement, (m) => m.movementType)
+  movements?: StockMovement[];
 }

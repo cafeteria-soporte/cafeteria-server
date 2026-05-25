@@ -9,15 +9,15 @@ import { StockMovementTypesModule } from 'src/modules/inventory/stock-movement-t
 import { GlobalSettingsModule } from 'src/modules/system-config/global-settings/global-settings.module';
 
 @Module({
-    imports: [
-        UserOrdersModule,
-        OrderItemsModule,
-        OrderPaymentsModule,
-        StockMovementsModule,
-        StockMovementTypesModule,
-        GlobalSettingsModule,
-    ],
-    providers: [ConfirmPaymentUseCase, VoidOrderUseCase],
-    exports:   [ConfirmPaymentUseCase, VoidOrderUseCase],
+  imports: [
+    UserOrdersModule,
+    OrderItemsModule,
+    OrderPaymentsModule,
+    StockMovementsModule,
+    StockMovementTypesModule,
+    GlobalSettingsModule,
+  ],
+  providers: [ConfirmPaymentUseCase, VoidOrderUseCase],
+  exports: [ConfirmPaymentUseCase, VoidOrderUseCase],
 })
 export class SalesModule {}
