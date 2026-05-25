@@ -4,9 +4,10 @@ import { InventoryFilterDto } from '../dto/in/inventory-filter.dto';
 import { AdministratorUp } from 'src/app/auth/decorators';
 import { CurrentUser } from 'src/shared';
 import { AuditLogService } from 'src/modules/system-config/audit-log/services/audit-log.service';
+import { AuditAction, AuditModule } from 'src/modules/system-config/audit-log/enums';
 const PDFDocument = require('pdfkit');
 
-@Controller('cafeteria/analytics/inventory')
+@Controller('analytics/inventory')
 export class InventoryAnalyticsController {
   constructor(
     private readonly service: InventoryAnalyticsService,
@@ -20,8 +21,8 @@ export class InventoryAnalyticsController {
     @CurrentUser() user: any,
   ) {
     await this.auditLog.create({
-      action: 'settings_changed' as any,
-      module: 'system-config' as any,
+      action: AuditAction.REPORT_QUERIED,
+      module: AuditModule.ANALYTICS,
       userId: user.id,
       usernameSnapshot: user.username,
       newValue: 'Consultó historial de movimientos',
@@ -52,8 +53,8 @@ export class InventoryAnalyticsController {
     const data = await this.service.getMovements(query);
 
     await this.auditLog.create({
-      action: 'settings_changed' as any,
-      module: 'system-config' as any,
+      action: AuditAction.REPORT_QUERIED,
+      module: AuditModule.ANALYTICS,
       userId: user.id,
       usernameSnapshot: user.username,
       newValue: `Exportó reporte de inventario en ${format}`,
