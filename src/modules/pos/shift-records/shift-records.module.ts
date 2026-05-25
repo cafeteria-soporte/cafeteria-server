@@ -7,7 +7,11 @@ import { UserOrdersModule } from '../user-orders/user-orders.module';
 import { GlobalSettingsModule } from 'src/modules/system-config/global-settings/global-settings.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ShiftRecord]), forwardRef(() => UserOrdersModule), GlobalSettingsModule],
+  imports: [
+    TypeOrmModule.forFeature([ShiftRecord]),
+    forwardRef(() => UserOrdersModule),
+    GlobalSettingsModule,
+  ],
   controllers: [ShiftRecordsController],
   providers: [ShiftRecordsService],
   exports: [ShiftRecordsService],

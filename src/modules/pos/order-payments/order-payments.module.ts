@@ -6,9 +6,12 @@ import { OrderPaymentsController } from './controllers/order-payments.controller
 import { UserOrdersModule } from '../user-orders/user-orders.module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([OrderPayment]), forwardRef(() => UserOrdersModule)],
-    controllers: [OrderPaymentsController],
-    providers: [OrderPaymentsService],
-    exports: [OrderPaymentsService],
+  imports: [
+    TypeOrmModule.forFeature([OrderPayment]),
+    forwardRef(() => UserOrdersModule),
+  ],
+  controllers: [OrderPaymentsController],
+  providers: [OrderPaymentsService],
+  exports: [OrderPaymentsService],
 })
 export class OrderPaymentsModule {}

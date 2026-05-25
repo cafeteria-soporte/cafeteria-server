@@ -4,11 +4,11 @@ import { ApiMailerAdapter } from './api.adapter';
 import { MailerPort } from '../mailer.port';
 
 @Module({
-    providers: [
-        ApiMailerConfig,
-        ApiMailerAdapter,
-        { provide: MailerPort, useExisting: ApiMailerAdapter },
-    ],
-    exports: [MailerPort],
+  providers: [
+    ApiMailerConfig,
+    ApiMailerAdapter,
+    { provide: MailerPort, useExisting: ApiMailerAdapter },
+  ],
+  exports: [MailerPort],
 })
-export class ApiMailerModule { }
+export class ApiMailerModule {}

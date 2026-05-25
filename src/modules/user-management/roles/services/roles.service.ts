@@ -10,30 +10,34 @@ import { RoleNotFoundException } from '../exceptions/role-not-found.exception';
 
 @Injectable()
 export class RolesService {
-    private readonly repo: DtoRepository<Role>;
+  private readonly repo: DtoRepository<Role>;
 
-    constructor(
-        @InjectRepository(Role)
-        private readonly rawRepo: Repository<Role>,
-    ) {
-        this.repo = new DtoRepository(rawRepo);
-    }
+  constructor(
+    @InjectRepository(Role)
+    private readonly rawRepo: Repository<Role>,
+  ) {
+    this.repo = new DtoRepository(rawRepo);
+  }
 
-    async findAll(params: FindRolesDto): Promise<FindAllRolesResponseDto> {
-        const where: Record<string, any> = {};
-        if (params.name !== undefined) where['name'] = ILike(`%${params.name}%`);
+  async findAll(params: FindRolesDto): Promise<FindAllRolesResponseDto> {
+    const where: Record<string, any> = {};
+    if (params.name !== undefined) where['name'] = ILike(`%${params.name}%`);
 
-        return this.repo.findPaginated({
-            dto:        RoleDto,
-            pagination: params,
-            where,
-            order:      { id: 'ASC' },
-        }) as Promise<FindAllRolesResponseDto>;
-    }
+    return this.repo.findPaginated({
+      dto: RoleDto,
+      pagination: params,
+      where,
+      order: { id: 'ASC' },
+    }) as Promise<FindAllRolesResponseDto>;
+  }
 
-    async findOne<T = RoleDto>(id: number, options: FindOptions<T> = { dto: RoleDto as any, throwException: true }): Promise<T | null> {
-        const result = await this.repo.findOne({ dto: options.dto, where: { id } });
-        if (!result && options.throwException !== false) throw new RoleNotFoundException();
-        return result;
-    }
+  async findOne<T = RoleDto>(
+    id: number,
+    options: FindOptions<T> = { dto: RoleDto as any, throwException: true },
+  ): Promise<T | null> {
+    const result = await this.repo.findOne({ dto: options.dto, where: { id } });
+    if (!result && options.throwException !== false)
+      throw new RoleNotFoundException();
+    return result;
+  }
 }

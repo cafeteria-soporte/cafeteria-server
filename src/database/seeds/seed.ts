@@ -78,7 +78,7 @@ async function seed(): Promise<void> {
   console.log(`  ${GREEN}✔  Conexión a la base de datos establecida${RESET}`);
 
   try {
-    // await seedRoles();
+    await seedRoles();
     await seedRootUser();
 
     console.log(`\n${GREEN}${BOLD}✔  Seed completado.${RESET}\n`);

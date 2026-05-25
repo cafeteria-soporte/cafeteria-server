@@ -13,39 +13,45 @@ import { FindAllGlobalSettingsResponseDto } from '../dto/out/find-all-global-set
 @ApiTags('Global Settings')
 @Controller('global-settings')
 export class GlobalSettingsController {
-    constructor(private readonly service: GlobalSettingsService) {}
+  constructor(private readonly service: GlobalSettingsService) {}
 
-    @RootOnly()
-    @Get()
-    @ApiOperation({ summary: 'Listar configuraciones del sistema paginadas' })
-    @ApiOkResponse({ type: FindAllGlobalSettingsResponseDto })
-    findAll(@Query() params: FindGlobalSettingsDto): Promise<FindAllGlobalSettingsResponseDto> {
-        return this.service.findAll(params);
-    }
+  @RootOnly()
+  @Get()
+  @ApiOperation({ summary: 'Listar configuraciones del sistema paginadas' })
+  @ApiOkResponse({ type: FindAllGlobalSettingsResponseDto })
+  findAll(
+    @Query() params: FindGlobalSettingsDto,
+  ): Promise<FindAllGlobalSettingsResponseDto> {
+    return this.service.findAll(params);
+  }
 
-    @RootOnly()
-    @Get(':key')
-    @ApiOperation({ summary: 'Obtener una configuración por clave' })
-    @ApiOkResponse({ type: GlobalSettingDto })
-    @ApiNotFound()
-    findOne(@Param('key') key: string): Promise<GlobalSettingDto> {
-        return this.service.findOne(key, { dto: GlobalSettingDto, throwException: true }) as Promise<GlobalSettingDto>;
-    }
+  @RootOnly()
+  @Get(':key')
+  @ApiOperation({ summary: 'Obtener una configuración por clave' })
+  @ApiOkResponse({ type: GlobalSettingDto })
+  @ApiNotFound()
+  findOne(@Param('key') key: string): Promise<GlobalSettingDto> {
+    return this.service.findOne(key, {
+      dto: GlobalSettingDto,
+      throwException: true,
+    });
+  }
 
-    @RootOnly()
-    @Patch(':key')
-    @ApiOperation({
-        summary: 'Actualizar una configuración',
-        description: 'Solo root. Registra el cambio en audit log con valor anterior y nuevo.',
-    })
-    @ApiOkResponse({ type: GlobalSettingDto })
-    @ApiNotFound()
-    @ApiValidationError()
-    update(
-        @Param('key') key: string,
-        @Body() dto: UpdateGlobalSettingDto,
-        @CurrentUser() actingUser: AuthUser,
-    ): Promise<GlobalSettingDto> {
-        return this.service.update(key, dto, actingUser);
-    }
+  @RootOnly()
+  @Patch(':key')
+  @ApiOperation({
+    summary: 'Actualizar una configuración',
+    description:
+      'Solo root. Registra el cambio en audit log con valor anterior y nuevo.',
+  })
+  @ApiOkResponse({ type: GlobalSettingDto })
+  @ApiNotFound()
+  @ApiValidationError()
+  update(
+    @Param('key') key: string,
+    @Body() dto: UpdateGlobalSettingDto,
+    @CurrentUser() actingUser: AuthUser,
+  ): Promise<GlobalSettingDto> {
+    return this.service.update(key, dto, actingUser);
+  }
 }

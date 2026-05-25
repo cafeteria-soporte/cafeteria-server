@@ -26,25 +26,29 @@ import { IsInt, Min, IsOptional } from 'class-validator';
  *   // findAll(@Query() params: FindAllUsersParamsDto)
  */
 export class PaginationParamsDto {
-    @ApiPropertyOptional({
-        description: 'Número de la página (empieza en 1). Default: 1.',
-        example: 2,
-        default: 1,
-    })
-    @IsOptional()
-    @Type(() => Number)
-    @IsInt({ message: "The 'page' parameter must be an integer." })
-    @Min(1, { message: "The 'page' parameter must be greater than or equal to 1." })
-    page: number = 1;
+  @ApiPropertyOptional({
+    description: 'Número de la página (empieza en 1). Default: 1.',
+    example: 2,
+    default: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: "The 'page' parameter must be an integer." })
+  @Min(1, {
+    message: "The 'page' parameter must be greater than or equal to 1.",
+  })
+  page: number = 1;
 
-    @ApiPropertyOptional({
-        description: 'Cantidad de resultados por página. Default: 10.',
-        example: 20,
-        default: 10,
-    })
-    @IsOptional()
-    @Type(() => Number)
-    @IsInt({ message: "The 'limit' parameter must be an integer." })
-    @Min(1, { message: "The 'limit' parameter must be greater than or equal to 1." })
-    limit: number = 10;
+  @ApiPropertyOptional({
+    description: 'Cantidad de resultados por página. Default: 10.',
+    example: 20,
+    default: 10,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: "The 'limit' parameter must be an integer." })
+  @Min(1, {
+    message: "The 'limit' parameter must be greater than or equal to 1.",
+  })
+  limit: number = 10;
 }

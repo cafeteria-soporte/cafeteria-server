@@ -5,9 +5,9 @@ import { StockMovementTypesService } from './services/stock-movement-types.servi
 import { StockMovementTypesController } from './controllers/stock-movement-types.controller';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([StockMovementType])],
-    controllers: [StockMovementTypesController],
-    providers: [StockMovementTypesService],
-    exports: [StockMovementTypesService],
+  imports: [TypeOrmModule.forFeature([StockMovementType])],
+  controllers: [StockMovementTypesController],
+  providers: [StockMovementTypesService],
+  exports: [StockMovementTypesService],
 })
 export class StockMovementTypesModule {}

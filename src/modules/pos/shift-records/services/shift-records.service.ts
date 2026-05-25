@@ -21,7 +21,11 @@ import { GlobalSettingsService } from 'src/modules/system-config/global-settings
 import { FindShiftRecordsDto } from '../dto/in/find-shift-records.dto';
 import { FindAllShiftRecordsResponseDto } from '../dto/out/find-all-shift-records-response.dto';
 
-const ROLE_NAMES: Record<number, string> = { 1: 'root', 2: 'administrator', 3: 'cashier' };
+const ROLE_NAMES: Record<number, string> = {
+  1: 'root',
+  2: 'administrator',
+  3: 'cashier',
+};
 
 @Injectable()
 export class ShiftRecordsService {
@@ -39,48 +43,75 @@ export class ShiftRecordsService {
     this.rawRepo = rawRepo;
   }
 
-  async findAll(params: FindShiftRecordsDto): Promise<FindAllShiftRecordsResponseDto> {
+  async findAll(
+    params: FindShiftRecordsDto,
+  ): Promise<FindAllShiftRecordsResponseDto> {
     const where: Record<string, any> = {};
     if (params.cashierId !== undefined) where['cashierId'] = params.cashierId;
-    if (params.status    !== undefined) where['status']    = params.status;
-    if (params.from && params.to) where['openedAt'] = Between(new Date(params.from), new Date(params.to));
-    else if (params.from) where['openedAt'] = MoreThanOrEqual(new Date(params.from));
-    else if (params.to)   where['openedAt'] = LessThanOrEqual(new Date(params.to));
+    if (params.status !== undefined) where['status'] = params.status;
+    if (params.from && params.to)
+      where['openedAt'] = Between(new Date(params.from), new Date(params.to));
+    else if (params.from)
+      where['openedAt'] = MoreThanOrEqual(new Date(params.from));
+    else if (params.to)
+      where['openedAt'] = LessThanOrEqual(new Date(params.to));
 
     return this.repo.findPaginated({
-      dto:        ShiftRecordDto,
+      dto: ShiftRecordDto,
       pagination: params,
       where,
-      order:      { openedAt: 'DESC' },
+      order: { openedAt: 'DESC' },
     }) as Promise<FindAllShiftRecordsResponseDto>;
   }
 
-  async findOne<T = ShiftRecordDto>(id: number, options: FindOptions<T> = { dto: ShiftRecordDto as any, throwException: true }): Promise<T | null> {
+  async findOne<T = ShiftRecordDto>(
+    id: number,
+    options: FindOptions<T> = {
+      dto: ShiftRecordDto as any,
+      throwException: true,
+    },
+  ): Promise<T | null> {
     const result = await this.repo.findOne({ dto: options.dto, where: { id } });
-    if (!result && options.throwException !== false) throw new ShiftNotFoundException();
+    if (!result && options.throwException !== false)
+      throw new ShiftNotFoundException();
     return result;
   }
 
   async findMyCurrent(cashierId: number): Promise<ShiftRecordDto | null> {
-    return this.repo.findOne({ dto: ShiftRecordDto, where: { cashierId, status: 'open' } });
+    return this.repo.findOne({
+      dto: ShiftRecordDto,
+      where: { cashierId, status: 'open' },
+    });
   }
 
-  async findOpenShiftById(shiftId: number, cashierId: number): Promise<ShiftRecordDto | null> {
-    return this.repo.findOne({ dto: ShiftRecordDto, where: { id: shiftId, cashierId, status: 'open' } });
+  async findOpenShiftById(
+    shiftId: number,
+    cashierId: number,
+  ): Promise<ShiftRecordDto | null> {
+    return this.repo.findOne({
+      dto: ShiftRecordDto,
+      where: { id: shiftId, cashierId, status: 'open' },
+    });
   }
 
-  async findAllMine(cashierId: number, params: FindShiftRecordsDto): Promise<FindAllShiftRecordsResponseDto> {
+  async findAllMine(
+    cashierId: number,
+    params: FindShiftRecordsDto,
+  ): Promise<FindAllShiftRecordsResponseDto> {
     const where: Record<string, any> = { cashierId };
     if (params.status !== undefined) where['status'] = params.status;
-    if (params.from && params.to) where['openedAt'] = Between(new Date(params.from), new Date(params.to));
-    else if (params.from) where['openedAt'] = MoreThanOrEqual(new Date(params.from));
-    else if (params.to)   where['openedAt'] = LessThanOrEqual(new Date(params.to));
+    if (params.from && params.to)
+      where['openedAt'] = Between(new Date(params.from), new Date(params.to));
+    else if (params.from)
+      where['openedAt'] = MoreThanOrEqual(new Date(params.from));
+    else if (params.to)
+      where['openedAt'] = LessThanOrEqual(new Date(params.to));
 
     return this.repo.findPaginated({
-      dto:        ShiftRecordDto,
+      dto: ShiftRecordDto,
       pagination: params,
       where,
-      order:      { openedAt: 'DESC' },
+      order: { openedAt: 'DESC' },
     }) as Promise<FindAllShiftRecordsResponseDto>;
   }
 
@@ -136,7 +167,9 @@ export class ShiftRecordsService {
     if (!activeShift) throw new ShiftNotFoundException();
 
     const cashSales = await this.getCashTotalByShift(activeShift.id);
-    const threshold = await this.globalSettingsService.findValueByKey('cash_discrepancy_threshold');
+    const threshold = await this.globalSettingsService.findValueByKey(
+      'cash_discrepancy_threshold',
+    );
     const discrepancyThreshold = parseFloat(threshold ?? '5');
     const expectedAmount = Number(activeShift.initialFund) + cashSales;
     const declaredAmount = Number(dto.declaredAmount);
