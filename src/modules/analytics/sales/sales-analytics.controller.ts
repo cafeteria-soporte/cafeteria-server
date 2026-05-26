@@ -15,6 +15,7 @@ import {
 import { SalesByPeriodDto } from './dto/out/sales-by-period.dto';
 import { TopProductDto } from './dto/out/top-product.dto';
 import { SalesByCategoryDto } from './dto/out/sales-by-category.dto';
+import { PaymentMethodShareDto } from './dto/out/payment-method-share.dto';
 import { AnalyticsAuditInterceptor } from '../interceptors/analytics-audit.interceptor';
 
 @ApiTags('Analytics - Ventas')
@@ -57,6 +58,16 @@ export class SalesAnalyticsController {
   @ApiOkResponse({ type: TopProductDto, isArray: true })
   findTopProducts(@Query() filter: SalesFilterDto): Promise<TopProductDto[]> {
     return this.service.findTopProducts(filter);
+  }
+
+  @Get('payment-methods')
+  @ApiOperation({
+      summary: 'Distribución de ventas por método de pago (Admin+)',
+      description: 'Porcentaje de órdenes pagadas con efectivo, tarjeta, transferencia o pago mixto. Útil para gráfico de torta.',
+  })
+  @ApiOkResponse({ type: PaymentMethodShareDto, isArray: true })
+  findPaymentMethodShare(@Query() filter: SalesFilterDto): Promise<PaymentMethodShareDto[]> {
+      return this.service.findPaymentMethodShare(filter);
   }
 
   @Get('export')

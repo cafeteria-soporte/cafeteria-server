@@ -5,6 +5,7 @@ import { StreamableFile } from '@nestjs/common';
 import { SalesByPeriodDto } from './dto/out/sales-by-period.dto';
 import { TopProductDto } from './dto/out/top-product.dto';
 import { SalesByCategoryDto } from './dto/out/sales-by-category.dto';
+import { PaymentMethodShareDto } from './dto/out/payment-method-share.dto';
 import {
   ExportFormat,
   GroupBy,
@@ -303,6 +304,43 @@ export class SalesAnalyticsService {
       disposition: 'attachment; filename="reporte-ventas.pdf"',
     });
   }
+
+  async findPaymentMethodShare(filter: SalesFilterDto): Promise<PaymentMethodShareDto[]> {
+        const { where, params } = this.buildDateWhere(filter.from, filter.to);
+
+        const rows = await this.dataSource.query<Array<{
+            method: string;
+            order_count: string;
+        }>>(
+            `SELECT
+                CASE
+                    WHEN COUNT(DISTINCT op.payment_method_id) > 1 THEN 'mixed'
+                    ELSE MAX(pm.name)
+                END AS method,
+                COUNT(DISTINCT uo.user_order_id) AS order_count
+             FROM user_orders uo
+             JOIN order_payments op ON op.user_order_id = uo.user_order_id
+             JOIN payment_methods pm ON pm.payment_method_id = op.payment_method_id
+             ${where}
+             GROUP BY uo.user_order_id`,
+            params,
+        );
+
+        const grouped: Record<string, number> = {};
+        for (const r of rows) {
+            grouped[r.method] = (grouped[r.method] ?? 0) + Number(r.order_count);
+        }
+
+        const total = Object.values(grouped).reduce((s, v) => s + v, 0);
+
+        return Object.entries(grouped)
+            .map(([method, orderCount]) => ({
+                method,
+                orderCount,
+                percentage: total > 0 ? Math.round((orderCount / total) * 1000) / 10 : 0,
+            }))
+            .sort((a, b) => b.orderCount - a.orderCount);
+    }
 
   private buildDateWhere(
     from?: string,
