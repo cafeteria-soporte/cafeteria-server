@@ -9,11 +9,12 @@ export class TabPredictivoService {
   constructor(@InjectDataSource() private readonly ds: DataSource) {}
 
   async get(filter: DssFilterDto): Promise<TabPredictivoResponseDto> {
-    const [criticalStock, shrinkage, peakHour, growingCategory] = await Promise.all([
+    const [criticalStock, shrinkage, peakHour, growingCategory, stockTrend] = await Promise.all([
       this.getCriticalStock(),
       this.getExpectedShrinkage(),
       this.getPeakHour(),
       this.getGrowingCategory(),
+      this.getStockTrend(),
     ]);
 
     return {
@@ -24,6 +25,7 @@ export class TabPredictivoService {
         peakHourEnd: peakHour?.end ?? null,
         growingCategory,
       },
+      stockTrend,
     };
   }
 
@@ -121,6 +123,54 @@ export class TabPredictivoService {
       start: `${String(h).padStart(2, '0')}:00`,
       end: `${String(h + 1).padStart(2, '0')}:00`,
     };
+  }
+
+  private async getStockTrend() {
+    const rows = await this.ds.query<
+      Array<{
+        date: string;
+        day_label: string;
+        avg_stock: number;
+        total_shrinkage: number;
+      }>
+    >(
+      `WITH daily AS (
+         SELECT
+           DATE(sm.created_at)                                                    AS day,
+           p.product_id,
+           MAX(sm.stock_after)                                                    AS end_stock,
+           SUM(CASE WHEN smt.name = 'shrinkage' THEN ABS(sm.quantity) ELSE 0 END) AS shrinkage
+         FROM stock_movements sm
+         JOIN products p ON p.product_id = sm.product_id
+         JOIN stock_movement_types smt ON smt.movement_type_id = sm.movement_type_id
+         WHERE sm.created_at >= NOW() - INTERVAL '7 days'
+           AND p.active = true
+         GROUP BY DATE(sm.created_at), p.product_id
+       )
+       SELECT
+         day::text AS date,
+         CASE EXTRACT(DOW FROM day)::int
+           WHEN 0 THEN 'Dom'
+           WHEN 1 THEN 'Lun'
+           WHEN 2 THEN 'Mar'
+           WHEN 3 THEN 'Mié'
+           WHEN 4 THEN 'Jue'
+           WHEN 5 THEN 'Vie'
+           ELSE 'Sáb'
+         END AS day_label,
+         ROUND(AVG(end_stock))::int AS avg_stock,
+         SUM(shrinkage)::int        AS total_shrinkage
+       FROM daily
+       GROUP BY day
+       ORDER BY day ASC`,
+    );
+
+    return rows.map((r) => ({
+      date: r.date,
+      dayLabel: r.day_label,
+      avgStock: Number(r.avg_stock),
+      totalShrinkage: Number(r.total_shrinkage),
+    }));
   }
 
   // Categoría con mayor crecimiento esta semana vs la anterior

@@ -28,9 +28,10 @@ export class TabPrincipalService {
 
     let cashAccumulationBs = 0;
     let fatigueRiskScore = 0;
+    let cashAccumulationHistory: Array<{ hour: string; amountBs: number }> = [];
 
     if (shift) {
-      // 2. Efectivo acumulado en el turno activo
+      // 2. Efectivo acumulado total + historial por hora
       const [cashRow] = await this.ds.query<Array<{ cash_bs: string }>>(
         `SELECT COALESCE(SUM(op.amount), 0) AS cash_bs
          FROM order_payments op
@@ -43,7 +44,34 @@ export class TabPrincipalService {
       );
       cashAccumulationBs = Number(cashRow.cash_bs);
 
-      // 3. Pagos cash consecutivos (últimas 10 órdenes del turno)
+      // 3. Historial acumulado por hora (initial_fund + pagos cash acumulados)
+      const historyRows = await this.ds.query<Array<{ hour: string; amount_bs: string }>>(
+        `WITH hourly AS (
+           SELECT
+             DATE_TRUNC('hour', uo.created_at)  AS hour_ts,
+             SUM(op.amount)                      AS hour_cash
+           FROM order_payments op
+           JOIN user_orders uo ON uo.user_order_id = op.user_order_id
+           JOIN payment_methods pm ON pm.payment_method_id = op.payment_method_id
+           WHERE uo.shift_record_id = $1
+             AND uo.status = 'paid'
+             AND pm.name = 'cash'
+           GROUP BY hour_ts
+         )
+         SELECT
+           TO_CHAR(hour_ts, 'HH24:MI') AS hour,
+           (SELECT sr.initial_fund FROM shift_records sr WHERE sr.shift_record_id = $1)
+           + SUM(hour_cash) OVER (ORDER BY hour_ts) AS amount_bs
+         FROM hourly
+         ORDER BY hour_ts`,
+        [shift.shift_record_id],
+      );
+      cashAccumulationHistory = historyRows.map((r) => ({
+        hour: r.hour,
+        amountBs: Number(r.amount_bs),
+      }));
+
+      // 4. Pagos cash consecutivos (últimas 10 órdenes del turno)
       const [consRow] = await this.ds.query<Array<{ consecutive_cash: string }>>(
         `SELECT COUNT(*) AS consecutive_cash
          FROM (
@@ -65,15 +93,13 @@ export class TabPrincipalService {
       );
       const consecutiveCash = Number(consRow.consecutive_cash);
 
-      // 4. Score de fatiga: horas activas × 8 + cash consecutivos × 3 (máx 100)
-      const hoursActive = Number(shift.hours_active);
+      // 5. Score de fatiga: horas activas × 8 + cash consecutivos × 3 (máx 100)
       const threshold = filter.crisisMode ? 60 : 80;
-      fatigueRiskScore = Math.min(100, Math.round(hoursActive * 8 + consecutiveCash * 3));
-      // Si el score calculado supera el umbral del modo, lo empuja a 100
+      fatigueRiskScore = Math.min(100, Math.round(Number(shift.hours_active) * 8 + consecutiveCash * 3));
       if (fatigueRiskScore >= threshold) fatigueRiskScore = Math.min(100, fatigueRiskScore);
     }
 
-    // 5. Costo de oportunidad: productos actualmente en stock 0
+    // 6. Costo de oportunidad: productos actualmente en stock 0
     const [oppRow] = await this.ds.query<Array<{ opportunity_cost_bs: string }>>(
       `WITH current_zero AS (
          SELECT p.product_id, p.sale_price
@@ -113,26 +139,73 @@ export class TabPrincipalService {
     );
     const opportunityCostBs = Number(oppRow.opportunity_cost_bs);
 
-    // 6. Ranking de eficiencia de cajeros
+    // 7. Ranking de eficiencia con desglose por dimensión
     const { dateWhere, params } = this.buildDateWhere(filter.startDate, filter.endDate);
     const efficiencyRows = await this.ds.query<
-      Array<{ cashier_name: string; efficiency_score: number }>
+      Array<{
+        cashier_name: string;
+        efficiency_score: number;
+        sales_score: number;
+        accuracy_score: number;
+        speed_score: number;
+        cash_handling_score: number;
+        attendance_score: number;
+      }>
     >(
-      `SELECT
-         u.full_name AS cashier_name,
+      `WITH base AS (
+         SELECT
+           u.user_id,
+           u.full_name                                                              AS cashier_name,
+           COALESCE(SUM(uo.total), 0)                                              AS total_revenue,
+           COALESCE(SUM(ABS(sr.discrepancy)), 0)                                   AS total_discrepancy,
+           COUNT(DISTINCT uo.user_order_id)                                        AS total_orders,
+           COALESCE(SUM(
+             EXTRACT(EPOCH FROM (sr.closed_at - sr.opened_at)) / 3600.0
+           ), 0)                                                                    AS total_hours,
+           COUNT(DISTINCT sr.shift_record_id)                                      AS total_shifts,
+           COUNT(DISTINCT CASE WHEN sr.discrepancy_alert = false
+                               THEN sr.shift_record_id END)                        AS clean_shifts
+         FROM users u
+         LEFT JOIN shift_records sr
+           ON sr.cashier_id = u.user_id AND sr.status = 'closed' ${dateWhere}
+         LEFT JOIN user_orders uo
+           ON uo.shift_record_id = sr.shift_record_id AND uo.status = 'paid'
+         WHERE u.role_id = 3 AND u.active = true
+         GROUP BY u.user_id, u.full_name
+       ),
+       normalized AS (
+         SELECT *,
+           MAX(total_revenue)                                                     OVER () AS max_revenue,
+           MAX(CASE WHEN total_hours > 0
+                    THEN total_orders::float / total_hours ELSE 0 END)           OVER () AS max_speed,
+           AVG(total_shifts::float)                                              OVER () AS avg_shifts
+         FROM base
+       )
+       SELECT
+         cashier_name,
          GREATEST(0, 100 - ROUND(
-           CASE
-             WHEN COALESCE(SUM(uo.total), 0) = 0 THEN 0
-             ELSE COALESCE(SUM(ABS(sr.discrepancy)), 0) / NULLIF(SUM(uo.total), 0) * 1000
-           END
-         )) AS efficiency_score
-       FROM users u
-       LEFT JOIN shift_records sr
-         ON sr.cashier_id = u.user_id AND sr.status = 'closed' ${dateWhere}
-       LEFT JOIN user_orders uo
-         ON uo.shift_record_id = sr.shift_record_id AND uo.status = 'paid'
-       WHERE u.role_id = 3 AND u.active = true
-       GROUP BY u.user_id, u.full_name
+           CASE WHEN total_revenue = 0 THEN 0
+                ELSE total_discrepancy / NULLIF(total_revenue, 0) * 1000 END
+         ))::int                                                                  AS efficiency_score,
+         CASE WHEN max_revenue > 0
+           THEN LEAST(100, ROUND(total_revenue / max_revenue * 100))::int
+           ELSE 0 END                                                             AS sales_score,
+         GREATEST(0, 100 - ROUND(
+           CASE WHEN total_revenue = 0 THEN 0
+                ELSE total_discrepancy / NULLIF(total_revenue, 0) * 1000 END
+         ))::int                                                                  AS accuracy_score,
+         CASE WHEN total_hours > 0 AND max_speed > 0
+           THEN LEAST(100, ROUND(
+                  (total_orders::float / total_hours) / max_speed * 100
+                ))::int
+           ELSE 0 END                                                             AS speed_score,
+         CASE WHEN total_shifts > 0
+           THEN ROUND(clean_shifts::float / total_shifts * 100)::int
+           ELSE 100 END                                                           AS cash_handling_score,
+         CASE WHEN avg_shifts > 0
+           THEN LEAST(100, ROUND(total_shifts::float / avg_shifts * 100))::int
+           ELSE 100 END                                                           AS attendance_score
+       FROM normalized
        ORDER BY efficiency_score DESC`,
       params,
     );
@@ -143,12 +216,20 @@ export class TabPrincipalService {
         cashierName: shift?.cashier_name ?? null,
         cashAccumulationBs,
         fatigueRiskScore,
+        cashAccumulationHistory,
       },
       holisticKpis: {
         opportunityCostBs,
         cashierEfficiencyRanking: efficiencyRows.map((r) => ({
           cashierName: r.cashier_name,
           efficiencyScore: Number(r.efficiency_score),
+          breakdown: {
+            salesScore: Number(r.sales_score),
+            accuracyScore: Number(r.accuracy_score),
+            speedScore: Number(r.speed_score),
+            cashHandlingScore: Number(r.cash_handling_score),
+            attendanceScore: Number(r.attendance_score),
+          },
         })),
       },
     };

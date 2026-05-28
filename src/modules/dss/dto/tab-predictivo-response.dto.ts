@@ -9,9 +9,7 @@ export class CriticalStockDto {
 
   @ApiProperty({
     example: 12,
-    description:
-      'Cantidad de unidades disponibles en este momento (products.current_stock). ' +
-      'Valor en tiempo real, no filtrado por rango de fechas.',
+    description: 'Unidades disponibles en tiempo real (products.current_stock).',
   })
   currentStock: number;
 
@@ -19,10 +17,9 @@ export class CriticalStockDto {
     example: 2.5,
     nullable: true,
     description:
-      'Tiempo Estimado de Agotamiento (TEA) en horas. ' +
+      'Tiempo Estimado de Agotamiento en horas. ' +
       'Fórmula: current_stock ÷ (unidades_vendidas_hoy ÷ horas_desde_primera_venta_hoy). ' +
-      'Null si no hubo ventas hoy (no es posible calcular la tasa horaria). ' +
-      'Un valor de 2.5 significa que el stock se agotará en ~2 horas y 30 minutos.',
+      'Null si no hubo ventas hoy.',
   })
   teaHours: number | null;
 }
@@ -31,87 +28,93 @@ export class InventoryPredictionsDto {
   @ApiProperty({
     type: [CriticalStockDto],
     description:
-      'Productos cuyo stock actual es menor o igual a 3 veces el stock mínimo configurado. ' +
-      'Ordenados por TEA ascendente (los más urgentes primero). ' +
-      'Productos sin ventas hoy aparecen al final con teaHours=null.',
+      'Productos con current_stock ≤ min_stock × 3, ordenados por TEA ascendente. ' +
+      'Los que tienen teaHours=null aparecen al final.',
   })
   criticalStock: CriticalStockDto[];
 }
 
 export class ExpectedShrinkageDto {
-  @ApiProperty({
-    example: 'Sándwich Frío',
-    description: 'Nombre del producto con historial de mermas en este día de la semana.',
-  })
+  @ApiProperty({ example: 'Sándwich Frío' })
   productName: string;
 
   @ApiProperty({
     example: 15,
     description:
-      'Cantidad promedio de unidades que se esperan perder hoy por merma (vencimiento, rotura, etc.). ' +
-      'Calculado como el promedio de stock_movements con tipo "shrinkage" ' +
-      'registrados en el mismo día de la semana que hoy (histórico completo).',
+      'Promedio histórico de unidades perdidas por merma en el mismo día de la semana.',
   })
   expectedLossQty: number;
 
   @ApiProperty({
     example: 'alta',
     enum: ['alta', 'media', 'baja'],
-    description:
-      'Nivel de urgencia basado en expectedLossQty: ' +
-      '"alta" ≥ 10 unidades | "media" 5–9 unidades | "baja" < 5 unidades.',
+    description: '"alta" ≥10 unidades | "media" 5–9 | "baja" <5.',
   })
   urgency: string;
 }
 
 export class OperationsForecastDto {
-  @ApiProperty({
-    example: '10:00',
-    nullable: true,
-    description:
-      'Hora de inicio de la franja con mayor volumen de órdenes histórico (últimos 30 días). ' +
-      'Formato HH:MM (24 h). Null si no hay datos suficientes.',
-  })
+  @ApiProperty({ example: '10:00', nullable: true })
   peakHourStart: string | null;
 
-  @ApiProperty({
-    example: '11:00',
-    nullable: true,
-    description:
-      'Hora de fin de la franja pico (siempre peakHourStart + 1 hora). ' +
-      'Formato HH:MM (24 h). Null si peakHourStart es null.',
-  })
+  @ApiProperty({ example: '11:00', nullable: true })
   peakHourEnd: string | null;
 
   @ApiProperty({
     example: 'Bebidas Frías',
     nullable: true,
-    description:
-      'Categoría con mayor crecimiento en ventas esta semana vs la semana anterior. ' +
-      'Calculado como (ingresos_esta_semana − ingresos_semana_anterior) ÷ ingresos_semana_anterior. ' +
-      'Null si no hay ventas en alguna de las dos semanas para comparar.',
+    description: 'Categoría con mayor crecimiento porcentual esta semana vs la anterior.',
   })
   growingCategory: string | null;
 }
 
-export class TabPredictivoResponseDto {
+export class StockTrendPointDto {
   @ApiProperty({
-    type: InventoryPredictionsDto,
-    description: 'Predicciones de inventario crítico con TEA por producto.',
+    example: '2026-05-22',
+    description: 'Fecha del punto de la serie (YYYY-MM-DD).',
   })
+  date: string;
+
+  @ApiProperty({
+    example: 'Lun',
+    description: 'Etiqueta del día en español para el eje X del gráfico (Lun, Mar, Mié, Jue, Vie, Sáb, Dom).',
+  })
+  dayLabel: string;
+
+  @ApiProperty({
+    example: 18,
+    description:
+      'Stock promedio entre todos los productos activos al cierre de ese día. ' +
+      'Calculado como AVG(último stock_after por producto en ese día).',
+  })
+  avgStock: number;
+
+  @ApiProperty({
+    example: 4,
+    description:
+      'Total de unidades perdidas por merma (shrinkage) en todos los productos ese día.',
+  })
+  totalShrinkage: number;
+}
+
+export class TabPredictivoResponseDto {
+  @ApiProperty({ type: InventoryPredictionsDto })
   inventoryPredictions: InventoryPredictionsDto;
 
   @ApiProperty({
     type: [ExpectedShrinkageDto],
-    description:
-      'Mermas esperadas para hoy basadas en historial del mismo día de la semana. ' +
-      'Array vacío si no hay mermas históricas registradas para este día.',
+    description: 'Mermas esperadas para hoy. Array vacío si no hay historial de mermas este día de la semana.',
   })
   expectedShrinkage: ExpectedShrinkageDto[];
 
-  @ApiProperty({
-    type: OperationsForecastDto,
-    description: 'Pronóstico operacional: hora pico y tendencia de categorías.',
-  })
+  @ApiProperty({ type: OperationsForecastDto })
   operationsForecast: OperationsForecastDto;
+
+  @ApiProperty({
+    type: [StockTrendPointDto],
+    description:
+      'Serie temporal de los últimos 7 días para graficar la tendencia de stock y mermas. ' +
+      'Solo incluye días con al menos un movimiento de stock registrado.',
+  })
+  stockTrend: StockTrendPointDto[];
 }
