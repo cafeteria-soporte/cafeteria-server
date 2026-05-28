@@ -19,6 +19,7 @@ import { AuditLogModule } from './modules/system-config/audit-log/audit-log.modu
 import { SalesModule } from './app/sales/sales.module';
 import { AdminModule } from './app/admin/admin.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { DssModule } from './modules/dss/dss.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
     SalesModule,
     AdminModule,
     AnalyticsModule,
+    DssModule,
   ],
 })
 export class AppModule {}
