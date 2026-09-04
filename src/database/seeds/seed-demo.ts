@@ -147,16 +147,26 @@ async function seed(): Promise<void> {
   let totalVoids = 0;
 
   for (let day = 20; day >= 0; day--) {
-    // 1 turno por día (a veces 2). Domingo (dow) se salta a veces.
-    const shiftsToday = rand(1, 10) > 7 ? 2 : 1;
+    // Hoy: 1 solo turno y queda ABIERTO. Días pasados: 1-2 turnos cerrados.
+    const isToday = day === 0;
+    const shiftsToday = isToday ? 1 : rand(1, 10) > 7 ? 2 : 1;
     for (let s = 0; s < shiftsToday; s++) {
       const cashierId = pick(cashierIds);
       const initialFund = pick([300, 400, 500]);
-      const openHour = s === 0 ? 7 : 14;
-      const openedExpr = `NOW() - INTERVAL '${day} days' + INTERVAL '${openHour} hours'`;
-      const closedExpr = `NOW() - INTERVAL '${day} days' + INTERVAL '${openHour + 7} hours'`;
+      const isOpenToday = isToday;
 
-      const isOpenToday = day === 0 && s === shiftsToday - 1;
+      // Timestamps: SIEMPRE en el pasado (evita horas futuras al correr de madrugada).
+      const openHour = s === 0 ? 8 : 15;
+      const openedExpr = isToday
+        ? `NOW() - INTERVAL '5 hours'`
+        : `NOW() - INTERVAL '${day} days' + INTERVAL '${openHour} hours'`;
+      const closedExpr = isToday
+        ? null
+        : `NOW() - INTERVAL '${day} days' + INTERVAL '${openHour + 7} hours'`;
+      const orderTs = (o: number, n: number): string =>
+        isToday
+          ? `NOW() - INTERVAL '${Math.max(2, Math.round((1 - (o + 1) / (n + 1)) * 285) + rand(0, 8))} minutes'`
+          : `NOW() - INTERVAL '${day} days' + INTERVAL '${openHour + rand(0, 6)} hours' + INTERVAL '${rand(0, 59)} minutes'`;
 
       const [shift] = await q<{ shift_record_id: number }[]>(
         `INSERT INTO shift_records (cashier_id, initial_fund, status, opened_at)
@@ -170,8 +180,7 @@ async function seed(): Promise<void> {
       let cashCollected = 0;
 
       for (let o = 0; o < ordersInShift; o++) {
-        const orderHour = openHour + rand(0, 6);
-        const createdExpr = `NOW() - INTERVAL '${day} days' + INTERVAL '${orderHour} hours' + INTERVAL '${rand(0, 59)} minutes'`;
+        const createdExpr = orderTs(o, ordersInShift);
 
         const [order] = await q<{ user_order_id: number }[]>(
           `INSERT INTO user_orders (shift_record_id, cashier_id, total, status, created_at)
@@ -260,7 +269,7 @@ async function seed(): Promise<void> {
       }
 
       // Cerrar el turno (salvo el abierto de hoy)
-      if (!isOpenToday) {
+      if (!isOpenToday && closedExpr) {
         const expected = initialFund + cashCollected;
         // descuadre: mayormente 0, a veces ±
         const noise = pick([0, 0, 0, 0, rand(-80, -10), rand(10, 60), rand(-5, 5)]);
@@ -283,7 +292,7 @@ async function seed(): Promise<void> {
   const shrinkReasons = ['Vencimiento', 'Producto dañado', 'Derrame', 'Error de manipulación'];
   for (let i = 0; i < 25; i++) {
     const prod = pick(products);
-    const day = rand(0, 20);
+    const hoursAgo = rand(3, 20 * 24);
     const [{ current_stock }] = await q<{ current_stock: number }[]>(
       `SELECT current_stock FROM products WHERE product_id = $1`,
       [prod.id],
@@ -292,7 +301,7 @@ async function seed(): Promise<void> {
     if (qty <= 0) continue;
     await q(
       `INSERT INTO stock_movements (product_id, movement_type_id, user_id, quantity, stock_before, stock_after, reason, created_at)
-       VALUES ($1, 3, $2, $3, $4, $5, $6, NOW() - INTERVAL '${day} days')`,
+       VALUES ($1, 3, $2, $3, $4, $5, $6, NOW() - INTERVAL '${hoursAgo} hours')`,
       [prod.id, rootId, -qty, current_stock, current_stock - qty, pick(shrinkReasons)],
     );
   }
