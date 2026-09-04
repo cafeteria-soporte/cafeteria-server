@@ -132,6 +132,7 @@ export class TabMarketingService {
          JOIN products p ON p.product_id = oi.product_id
          JOIN categories c ON c.category_id = p.category_id
          ${where}
+           AND EXTRACT(HOUR FROM uo.created_at) BETWEEN 7 AND 21
          GROUP BY c.name, h
        ),
        cat_avg AS (
