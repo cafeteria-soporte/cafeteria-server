@@ -38,6 +38,7 @@ import { DatabaseConfig } from './config/database.config';
         autoLoadEntities: true,
         synchronize: true,
         logging: db.logging,
+        ssl: db.ssl ? { rejectUnauthorized: false } : false,
       }),
     }),
   ],

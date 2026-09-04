@@ -16,6 +16,7 @@ export const envValidation = Joi.object({
   DB_PASSWORD: Joi.string().required(),
   DB_NAME: Joi.string().required(),
   DB_LOGS: Joi.boolean().default(false),
+  DB_SSL: Joi.boolean().default(false),
 
   ACTIVE_JWT: Joi.boolean().default(true),
   JWT_SECRET: Joi.string().required(),
