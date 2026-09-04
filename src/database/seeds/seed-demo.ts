@@ -64,14 +64,17 @@ async function seed(): Promise<void> {
   await AppDataSource.initialize();
   const q: Q = (sql, params) => AppDataSource.query(sql, params) as Promise<any>;
 
-  // ── 0. Limpieza de tablas transaccionales ──────────────────────────────────
+  // ── 0. Limpieza (idempotente: se puede re-correr) ─────────────────────────
   await q(`TRUNCATE order_payments, order_items, user_orders, stock_movements, shift_records RESTART IDENTITY CASCADE`);
   await q(`DELETE FROM audit_log WHERE action IN ('price_changed','stock_adjusted','shrinkage_recorded','sale_paid','sale_voided','shift_opened','shift_closed')`);
-  console.log(`  ${Y}⚠  Tablas transaccionales vaciadas${R}`);
+  // products no tiene UNIQUE en name → borrar los de demo (ya sin referencias
+  // tras el TRUNCATE). categorías y cajeros usan ON CONFLICT más abajo.
+  await q(`DELETE FROM products WHERE name = ANY($1)`, [PRODUCTS.map((p) => p.name)]);
+  console.log(`  ${Y}⚠  Datos de demo previos eliminados${R}`);
 
   // ── 1. Cajeros ─────────────────────────────────────────────────────────────
   // hash bcrypt de "cajero123"
-  const HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMy.MQDqvB0Gt3sVzKQ3z1yv2p1Uu6bTq0e';
+  const HASH = '$2b$10$0O4QUMBcXzjT.OE2zhSqxebnyGB.EBjBq2FVMxlp2usy66/rUC72K';
   const cashierNames = ['Ana López', 'Carlos Mamani', 'Rosa Quispe'];
   const cashierIds: number[] = [];
   for (let i = 0; i < cashierNames.length; i++) {
